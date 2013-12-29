@@ -1,5 +1,5 @@
 <?php
-class WPMDBPro_Media_Files extends WPMDBPro_Addon {
+class WPMDB_Media_Files extends WPMDB_Addon {
 
 	function __construct( $plugin_file_path ) {
 		parent::__construct( $plugin_file_path );
