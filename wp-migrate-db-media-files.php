@@ -3,7 +3,7 @@
 Plugin Name: WP Migrate DB Media Files
 Description: An extension of WP Migrate DB that allows the migration of media files.
 Author: Sean Lang
-Version: 1.0
+Version: 1.1
 Author URI: http://slang.cx
 GitHub Plugin URI: slang800/wp-migrate-db-media-files
 */
