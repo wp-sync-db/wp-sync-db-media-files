@@ -9,20 +9,15 @@
 	<div class="indent-wrap expandable-content">
 		
 		<ul>
-			<li>
+			<li id="remove-local-media-list-item">
 				<label for="remove-local-media" class="remove-local-media">
 				<input type="checkbox" name="remove_local_media" value="1" id="remove-local-media"<?php echo ( isset( $loaded_profile['remove_local_media'] ) ? ' checked="checked"' : '' ); ?> />
-				Remove local media files that are not found on the remote site
+				Remove <span class="remove-scope-1">local</span> media files that are not found on the <span class="remove-scope-2">remote</span> site
 				</label>
 			</li>
 		</ul>
 
 	</div>
-
-	<p class="indent-wrap media-files-push" style="margin-bottom: 0; margin-top: 5px;">
-		<strong>Coming Soon</strong> &mdash; Currently, the Media Files addon only 
-		supports pull. We are working on push&nbsp;support.
-	</p>
 
 	<p class="media-migration-unavailable inline-message warning" style="display: none; margin: 10px 0 0 0;">
 		<strong>Addon Missing</strong> &mdash; The Media Files addon is
