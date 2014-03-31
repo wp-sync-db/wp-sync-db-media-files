@@ -5,9 +5,9 @@
 		<input type="checkbox" name="media_files" value="1" data-available="1" id="media-files"<?php echo ( isset( $loaded_profile['media_files'] ) ? ' checked="checked"' : '' ); ?> />
 		Media Files
 	</label>
-	
+
 	<div class="indent-wrap expandable-content">
-		
+
 		<ul>
 			<li>
 				<label for="remove-local-media" class="remove-local-media">
@@ -20,13 +20,13 @@
 	</div>
 
 	<p class="indent-wrap media-files-push" style="margin-bottom: 0; margin-top: 5px;">
-		<strong>Coming Soon</strong> &mdash; Currently, the Media Files addon only 
+		<strong>Coming Soon</strong> &mdash; Currently, the Media Files addon only
 		supports pull. We are working on push&nbsp;support.
 	</p>
 
 	<p class="media-migration-unavailable inline-message warning" style="display: none; margin: 10px 0 0 0;">
 		<strong>Addon Missing</strong> &mdash; The Media Files addon is
-		inactive on the <strong>remote site</strong>. Please install and activate it 
+		inactive on the <strong>remote site</strong>. Please install and activate it
 		to enable media file&nbsp;migration.
 	</p>
 

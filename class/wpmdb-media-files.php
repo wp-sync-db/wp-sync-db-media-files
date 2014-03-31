@@ -78,7 +78,7 @@ class WPMDB_Media_Files extends WPMDB_Addon {
 	function uploads_dir() {
 		if( defined( 'UPLOADBLOGSDIR' ) ) {
 			$upload_dir = trailingslashit( ABSPATH ) . UPLOADBLOGSDIR;
-		} 
+		}
 		else {
 			$upload_dir = wp_upload_dir();
 			$upload_dir = $upload_dir['basedir'];
@@ -302,7 +302,7 @@ class WPMDB_Media_Files extends WPMDB_Addon {
 		return false;
 	}
 
-	function get_blogs() { 
+	function get_blogs() {
 		global $wpdb;
 
 		$blogs = $wpdb->get_results(

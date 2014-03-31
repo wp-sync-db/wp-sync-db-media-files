@@ -16,7 +16,7 @@ var remote_connection_data;
 
 	$(document).ready(function() {
 
-		$.wpmdb.add_action( 'ready', function() { 
+		$.wpmdb.add_action( 'ready', function() {
 			if( migration_type() == 'savefile' ){
 				$('.media-files-options').hide();
 			}
@@ -72,7 +72,7 @@ var remote_connection_data;
 			$('#media-files').attr('data-available', '1');
 		};
 
-		$.wpmdb.add_action( 'move_connection_info_box', function() { 
+		$.wpmdb.add_action( 'move_connection_info_box', function() {
 			hide_show_options( remote_media_files_unavailable );
 		});
 
@@ -255,7 +255,7 @@ var remote_connection_data;
 		}
 
 		function migration_type() {
-			return $('input[name=action]:checked').val();	
+			return $('input[name=action]:checked').val();
 		}
 
 	});
