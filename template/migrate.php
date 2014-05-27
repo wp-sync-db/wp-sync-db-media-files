@@ -26,7 +26,7 @@
 	</p>
 
 	<p class="media-files-different-plugin-version-notice inline-message warning" style="display: none; margin: 10px 0 0 0;">
-		<strong>Version Mismatch</strong> &mdash; We've detected you have version <span class="media-file-remote-version"></span> of WP Migrate DB Pro Media Files at <span class="media-files-remote-location"></span> but are using <?php echo $this->get_installed_version(); ?> here. Please go to the <a href="<?php echo network_admin_url( 'plugins.php' ); ?>">Plugins page</a> on both installs and check for updates.
+		<strong>Version Mismatch</strong> &mdash; We've detected you have version <span class="media-file-remote-version"></span> of WP Migrate DB Pro Media Files at <span class="media-files-remote-location"></span> but are using <?php echo $GLOBALS['wpmdb_meta'][$this->plugin_slug]['version']; ?> here. Please go to the <a href="<?php echo network_admin_url( 'plugins.php' ); ?>">Plugins page</a> on both installs and check for updates.
 	</p>
 
 </div>

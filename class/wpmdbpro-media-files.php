@@ -6,13 +6,17 @@ class WPMDBPro_Media_Files extends WPMDBPro_Addon {
 	function __construct( $plugin_file_path ) {
 		parent::__construct( $plugin_file_path );
 
-		if( ! $this->meets_version_requirements( '1.3.1' ) ) return;
+		$this->plugin_slug = 'wp-migrate-db-pro-media-files';
+		$this->plugin_version = $GLOBALS['wpmdb_meta']['wp-migrate-db-pro-media-files']['version'];
+
+		if( ! $this->meets_version_requirements( '1.3.5' ) ) return;
 
 		add_action( 'wpmdb_after_advanced_options', array( $this, 'migration_form_controls' ) );
 		add_action( 'wpmdb_load_assets', array( $this, 'load_assets' ) );
 		add_action( 'wpmdb_js_variables', array( $this, 'js_variables' ) );
 		add_filter( 'wpmdb_accepted_profile_fields', array( $this, 'accepted_profile_fields' ) );
 		add_filter( 'wpmdb_establish_remote_connection_data', array( $this, 'establish_remote_connection_data' ) );
+		add_filter( 'wpmdb_nonces', array( $this, 'add_nonces' ) );
 
 		// internal AJAX handlers
 		add_action( 'wp_ajax_wpmdbmf_determine_media_to_migrate', array( $this, 'ajax_determine_media_to_migrate' ) );
@@ -148,6 +152,7 @@ class WPMDBPro_Media_Files extends WPMDBPro_Addon {
 	}
 
 	function ajax_migrate_media() {
+		$this->check_ajax_referer( 'migrate-media' );
 		$this->set_time_limit();
 
 		if( $_POST['intent'] == 'pull' ) {
@@ -301,6 +306,7 @@ class WPMDBPro_Media_Files extends WPMDBPro_Addon {
 	}
 
 	function ajax_determine_media_to_migrate() {
+		$this->check_ajax_referer( 'determine-media-to-migrate' );
 		$this->set_time_limit();
 
 		$local_attachments = $this->get_local_attachments();
@@ -428,7 +434,7 @@ class WPMDBPro_Media_Files extends WPMDBPro_Addon {
 		if( isset( $remote_media[$attachment['file']] ) ) {
 			$this->files_to_migrate[$attachment['file']] = $remote_media[$attachment['file']];
 		}
-		if( empty( $attachment['sizes'] ) ) return;
+		if( empty( $attachment['sizes'] ) || apply_filters( 'wpmdb_exclude_resized_media', false ) ) return;
 		foreach( $attachment['sizes'] as $size ) {
 			if( isset( $remote_media[$size] ) ) {
 				$this->files_to_migrate[$size] = $remote_media[$size];
@@ -437,7 +443,7 @@ class WPMDBPro_Media_Files extends WPMDBPro_Addon {
 	}
 
 	function maybe_add_resized_images( $attachment, $site_b_media, $site_a_media ) {
-		if( empty( $attachment['sizes'] ) ) return;
+		if( empty( $attachment['sizes'] ) || apply_filters( 'wpmdb_exclude_resized_media', false ) ) return;
 		foreach( $attachment['sizes'] as $size ) {
 			if( isset( $site_b_media[$size] ) && ! isset( $site_a_media[$size] ) ) {
 				$this->files_to_migrate[$size] = $site_b_media[$size];
@@ -485,15 +491,15 @@ class WPMDBPro_Media_Files extends WPMDBPro_Addon {
 	}
 
 	function load_assets() {
-		$plugins_url = trailingslashit( plugins_url() ) . trailingslashit( $this->plugin_slug );
+		$plugins_url = trailingslashit( plugins_url() ) . trailingslashit( $this->plugin_folder_name );
 		$src = $plugins_url . 'asset/js/script.js';
-		$version = defined('SCRIPT_DEBUG') && SCRIPT_DEBUG ? time() : $this->get_installed_version();
+		$version = defined('SCRIPT_DEBUG') && SCRIPT_DEBUG ? time() : $this->plugin_version;
 		wp_enqueue_script( 'wp-migrate-db-pro-media-files-script', $src, array( 'jquery' ), $version, true );
 	}
 
 	function establish_remote_connection_data( $data ) {
 		$data['media_files_available'] = '1';
-		$data['media_files_version'] = $this->get_installed_version();
+		$data['media_files_version'] = $this->plugin_version;
 		if( function_exists( 'ini_get' ) ) {
 			$max_file_uploads = ini_get( 'max_file_uploads' );
 		}
@@ -562,7 +568,7 @@ class WPMDBPro_Media_Files extends WPMDBPro_Addon {
 
 	function js_variables() {
 		?>
-		var wpmdb_media_files_version = '<?php echo $this->get_installed_version(); ?>';
+		var wpmdb_media_files_version = '<?php echo $this->plugin_version; ?>';
 		<?php
 	}
 
@@ -587,6 +593,12 @@ class WPMDBPro_Media_Files extends WPMDBPro_Addon {
 		}
 
 		return $response;
+	}
+
+	function add_nonces( $nonces ) {
+		$nonces['migrate_media'] = wp_create_nonce( 'migrate-media' );
+		$nonces['determine_media_to_migrate'] = wp_create_nonce( 'determine-media-to-migrate' );
+		return $nonces;
 	}
 
 }
