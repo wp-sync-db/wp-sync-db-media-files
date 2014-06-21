@@ -1,5 +1,5 @@
 <?php
-class WPMDB_Media_Files extends WPMDB_Addon {
+class WPSDB_Media_Files extends WPSDB_Addon {
 	protected $files_to_migrate;
 	protected $responding_to_get_remote_media_listing = false;
 
@@ -8,20 +8,20 @@ class WPMDB_Media_Files extends WPMDB_Addon {
 
 		if( ! $this->meets_version_requirements( '1.3.1' ) ) return;
 
-		add_action( 'wpmdb_after_advanced_options', array( $this, 'migration_form_controls' ) );
-		add_action( 'wpmdb_load_assets', array( $this, 'load_assets' ) );
-		add_action( 'wpmdb_js_variables', array( $this, 'js_variables' ) );
-		add_filter( 'wpmdb_accepted_profile_fields', array( $this, 'accepted_profile_fields' ) );
-		add_filter( 'wpmdb_establish_remote_connection_data', array( $this, 'establish_remote_connection_data' ) );
+		add_action( 'wpsdb_after_advanced_options', array( $this, 'migration_form_controls' ) );
+		add_action( 'wpsdb_load_assets', array( $this, 'load_assets' ) );
+		add_action( 'wpsdb_js_variables', array( $this, 'js_variables' ) );
+		add_filter( 'wpsdb_accepted_profile_fields', array( $this, 'accepted_profile_fields' ) );
+		add_filter( 'wpsdb_establish_remote_connection_data', array( $this, 'establish_remote_connection_data' ) );
 
 		// internal AJAX handlers
-		add_action( 'wp_ajax_wpmdbmf_determine_media_to_migrate', array( $this, 'ajax_determine_media_to_migrate' ) );
-		add_action( 'wp_ajax_wpmdbmf_migrate_media', array( $this, 'ajax_migrate_media' ) );
+		add_action( 'wp_ajax_wpsdbmf_determine_media_to_migrate', array( $this, 'ajax_determine_media_to_migrate' ) );
+		add_action( 'wp_ajax_wpsdbmf_migrate_media', array( $this, 'ajax_migrate_media' ) );
 
 		// external AJAX handlers
-		add_action( 'wp_ajax_nopriv_wpmdbmf_get_remote_media_listing', array( $this, 'respond_to_get_remote_media_listing' ) );
-		add_action( 'wp_ajax_nopriv_wpmdbmf_push_request', array( $this, 'respond_to_push_request' ) );
-		add_action( 'wp_ajax_nopriv_wpmdbmf_remove_local_attachments', array( $this, 'respond_to_remove_local_attachments' ) );
+		add_action( 'wp_ajax_nopriv_wpsdbmf_get_remote_media_listing', array( $this, 'respond_to_get_remote_media_listing' ) );
+		add_action( 'wp_ajax_nopriv_wpsdbmf_push_request', array( $this, 'respond_to_push_request' ) );
+		add_action( 'wp_ajax_nopriv_wpsdbmf_remove_local_attachments', array( $this, 'respond_to_remove_local_attachments' ) );
 	}
 
 	function get_local_attachments() {
@@ -205,7 +205,7 @@ class WPMDB_Media_Files extends WPMDB_Addon {
 
 		if( ! empty( $errors ) ) {
 			$return = array(
-				'wpmdb_error'	=> 1,
+				'wpsdb_error'	=> 1,
 				'body'			=> implode( '<br />', $errors ) . '<br />'
 			);
 			echo json_encode( $return );
@@ -229,7 +229,7 @@ class WPMDB_Media_Files extends WPMDB_Addon {
 		}
 
 		$post_args = array(
-			'action'	=> 'wpmdbmf_push_request',
+			'action'	=> 'wpsdbmf_push_request',
 			'files'		=> serialize( $files_to_migrate )
 		);
 
@@ -251,7 +251,7 @@ class WPMDB_Media_Files extends WPMDB_Addon {
 		$filtered_post['files'] = stripslashes( $filtered_post['files'] );
 		if ( ! $this->verify_signature( $filtered_post, $this->settings['key'] ) ) {
 			$return = array(
-				'wpmdb_error' 	=> 1,
+				'wpsdb_error' 	=> 1,
 				'body'			=> $this->invalid_content_verification_error . ' (#103mf)',
 			);
 			echo serialize( $return );
@@ -260,7 +260,7 @@ class WPMDB_Media_Files extends WPMDB_Addon {
 
 		if( ! isset( $_FILES['media'] ) ) {
 			$return = array(
-				'wpmdb_error' 	=> 1,
+				'wpsdb_error' 	=> 1,
 				'body'			=> '$_FILES is empty, the upload appears to have failed (#106mf)',
 			);
 			echo serialize( $return );
@@ -292,7 +292,7 @@ class WPMDB_Media_Files extends WPMDB_Addon {
 		$return = array( 'success' => 1 );
 		if( ! empty( $errors ) ) {
 			$return = array(
-				'wpmdb_error' 	=> 1,
+				'wpsdb_error' 	=> 1,
 				'body'			=> implode( '<br />', $errors ) . '<br />'
 			);
 		}
@@ -307,7 +307,7 @@ class WPMDB_Media_Files extends WPMDB_Addon {
 		$local_media = $this->get_local_media();
 
 		$data = array();
-		$data['action'] = 'wpmdbmf_get_remote_media_listing';
+		$data['action'] = 'wpsdbmf_get_remote_media_listing';
 		$data['temp_prefix'] = $this->temp_prefix;
 		$data['intent'] = $_POST['intent'];
 		$data['sig'] = $this->create_signature( $data, $_POST['key'] );
@@ -340,7 +340,7 @@ class WPMDB_Media_Files extends WPMDB_Addon {
 			}
 			else {
 				$data = array();
-				$data['action'] = 'wpmdbmf_remove_local_attachments';
+				$data['action'] = 'wpsdbmf_remove_local_attachments';
 				$data['remote_attachments'] = serialize( $local_attachments );
 				$data['sig'] = $this->create_signature( $data, $_POST['key'] );
 				$ajax_url = trailingslashit( $_POST['url'] ) . 'wp-admin/admin-ajax.php';
@@ -358,7 +358,7 @@ class WPMDB_Media_Files extends WPMDB_Addon {
 		$filtered_post['remote_attachments'] = stripslashes( $filtered_post['remote_attachments'] );
 		if ( ! $this->verify_signature( $filtered_post, $this->settings['key'] ) ) {
 			$return = array(
-				'wpmdb_error' 	=> 1,
+				'wpsdb_error' 	=> 1,
 				'body'			=> $this->invalid_content_verification_error . ' (#109mf)',
 			);
 			echo serialize( $return );
@@ -368,7 +368,7 @@ class WPMDB_Media_Files extends WPMDB_Addon {
 		$remote_attachments = @unserialize( $filtered_post['remote_attachments'] );
 		if( false === $remote_attachments ) {
 			$return = array(
-				'wpmdb_error' 	=> 1,
+				'wpsdb_error' 	=> 1,
 				'body'			=> 'Error attempting to unserialize the remote attachment data (#110mf)',
 			);
 			echo serialize( $return );
@@ -449,7 +449,7 @@ class WPMDB_Media_Files extends WPMDB_Addon {
 		$filtered_post = $this->filter_post_elements( $_POST, array( 'action', 'temp_prefix', 'intent' ) );
 		if ( ! $this->verify_signature( $filtered_post, $this->settings['key'] ) ) {
 			$return = array(
-				'wpmdb_error' 	=> 1,
+				'wpsdb_error' 	=> 1,
 				'body'			=> $this->invalid_content_verification_error . ' (#100mf)',
 			);
 			echo serialize( $return );
@@ -488,7 +488,7 @@ class WPMDB_Media_Files extends WPMDB_Addon {
 		$plugins_url = trailingslashit( plugins_url() ) . trailingslashit( $this->plugin_slug );
 		$src = $plugins_url . 'asset/js/script.js';
 		$version = defined('SCRIPT_DEBUG') && SCRIPT_DEBUG ? time() : $this->get_installed_version();
-		wp_enqueue_script( 'wp-migrate-db-media-files-script', $src, array( 'jquery' ), $version, true );
+		wp_enqueue_script( 'wp-sync-db-media-files-script', $src, array( 'jquery' ), $version, true );
 	}
 
 	function establish_remote_connection_data( $data ) {
@@ -498,7 +498,7 @@ class WPMDB_Media_Files extends WPMDB_Addon {
 			$max_file_uploads = ini_get( 'max_file_uploads' );
 		}
 		$max_file_uploads = ( empty( $max_file_uploads ) ) ? 20 : $max_file_uploads;
-		$data['media_files_max_file_uploads'] = apply_filters( 'wpmdbmf_max_file_uploads', $max_file_uploads );
+		$data['media_files_max_file_uploads'] = apply_filters( 'wpsdbmf_max_file_uploads', $max_file_uploads );
 		return $data;
 	}
 
@@ -562,26 +562,26 @@ class WPMDB_Media_Files extends WPMDB_Addon {
 
 	function js_variables() {
 		?>
-		var wpmdb_media_files_version = '<?php echo $this->get_installed_version(); ?>';
+		var wpsdb_media_files_version = '<?php echo $this->get_installed_version(); ?>';
 		<?php
 	}
 
 	function verify_remote_post_response( $response ) {
 		if ( false === $response ) {
-			$return = array( 'wpmdb_error' => 1, 'body' => $this->error );
+			$return = array( 'wpsdb_error' => 1, 'body' => $this->error );
 			echo json_encode( $return );
 			exit;
 		}
 
 		if ( ! is_serialized( trim( $response ) ) ) {
-			$return = array( 'wpmdb_error'	=> 1, 'body' => $response );
+			$return = array( 'wpsdb_error'	=> 1, 'body' => $response );
 			echo json_encode( $return );
 			exit;
 		}
 
 		$response = unserialize( trim( $response ) );
 
-		if ( isset( $response['wpmdb_error'] ) ) {
+		if ( isset( $response['wpsdb_error'] ) ) {
 			echo json_encode( $response );
 			exit;
 		}

@@ -17,7 +17,7 @@ var connection_info;
 
 	$(document).ready(function() {
 
-		$.wpmdb.add_action( 'ready', function() {
+		$.wpsdb.add_action( 'ready', function() {
 			if( migration_type() == 'savefile' ){
 				$('.media-files-options').hide();
 			}
@@ -48,7 +48,7 @@ var connection_info;
 				return;
 			}
 
-			if( typeof remote_connection_data != 'undefined' && wpmdb_media_files_version != remote_connection_data.media_files_version ) {
+			if( typeof remote_connection_data != 'undefined' && wpsdb_media_files_version != remote_connection_data.media_files_version ) {
 				$('.media-files-remote-location').html(remote_connection_data.url);
 				$('.media-file-remote-version').html(remote_connection_data.media_files_version);
 				$('.media-files-different-plugin-version-notice').show();
@@ -64,7 +64,7 @@ var connection_info;
 			$('#media-files').attr('data-available', '1');
 		};
 
-		$.wpmdb.add_action( 'move_connection_info_box', function() {
+		$.wpsdb.add_action( 'move_connection_info_box', function() {
 			hide_show_options( remote_media_files_unavailable );
 			$('.remove-scope-1').html('remote');
 			$('.remove-scope-2').html('local');
@@ -74,13 +74,13 @@ var connection_info;
 			}
 		});
 
-		$.wpmdb.add_action( 'verify_connection_to_remote_site', function( connection_data ) {
+		$.wpsdb.add_action( 'verify_connection_to_remote_site', function( connection_data ) {
 			remote_connection_data = connection_data;
 			remote_media_files_unavailable = ( typeof connection_data.media_files_available == 'undefined' );
 			hide_show_options( remote_media_files_unavailable );
 		});
 
-		$.wpmdb.add_filter('wpmdb_before_migration_complete_hooks',function(hooks) {
+		$.wpsdb.add_filter('wpsdb_before_migration_complete_hooks',function(hooks) {
 			if( false == is_media_migration() || 'savefile' == migration_type() ) return hooks;
 			hooks.push( 'determine_media_to_migrate' );
 			return hooks;
@@ -102,7 +102,7 @@ var connection_info;
 				dataType:	'text',
 				cache: 	false,
 				data: {
-					action: 			'wpmdbmf_determine_media_to_migrate',
+					action: 			'wpsdbmf_determine_media_to_migrate',
 					remove_local_media:	remove_local_media,
 					intent:				migration_type(),
 					url: 				connection_info[0],
@@ -122,7 +122,7 @@ var connection_info;
 				},
 				success: function(data){
 					original_data = data;
-					data = wpmdb_parse_json( $.trim( data ) );
+					data = wpsdb_parse_json( $.trim( data ) );
 					if( false == data ) {
 						migration_failed( original_data );
 						return;
@@ -144,9 +144,9 @@ var connection_info;
 		}
 
 		function media_successfully_determined( data ) {
-			if( typeof data.wpmdb_error != 'undefined' && data.wpmdb_error == 1 ){
+			if( typeof data.wpsdb_error != 'undefined' && data.wpsdb_error == 1 ){
 				non_fatal_errors += data.body;
-				wpmdb_call_next_hook();
+				wpsdb_call_next_hook();
 				return;
 			}
 
@@ -157,7 +157,7 @@ var connection_info;
 			args.remote_uploads_url = data.remote_uploads_url;
 			args.files_to_migrate = data.files_to_migrate;
 
-			args.bottleneck = wpmdb_max_request;
+			args.bottleneck = wpsdb_max_request;
 
 			if( Object.size( args.files_to_migrate ) > 0 ) {
 				$('.progress-bar').width('0px');
@@ -166,14 +166,14 @@ var connection_info;
 			$('.progress-tables').empty();
 			$('.progress-tables-hover-boxes').empty();
 
-			$('.progress-tables').prepend('<div title="Media Files" style="width: 100%;" class="progress-chunk media_files"><span>Media Files (<span class="media-migration-current-image">0</span> / ' + wpmdb_add_commas( Object.size( args.files_to_migrate ) ) + ')</span></div>');
+			$('.progress-tables').prepend('<div title="Media Files" style="width: 100%;" class="progress-chunk media_files"><span>Media Files (<span class="media-migration-current-image">0</span> / ' + wpsdb_add_commas( Object.size( args.files_to_migrate ) ) + ')</span></div>');
 
 			migrate_media_files_recursive( args );
 		}
 
 		function migrate_media_files_recursive( args ) {
 			if( 0 == Object.size( args.files_to_migrate ) ) {
-				wpmdb_call_next_hook();
+				wpsdb_call_next_hook();
 				return;
 			}
 
@@ -211,7 +211,7 @@ var connection_info;
 				dataType:	'text',
 				cache: 	false,
 				data: {
-					action: 			'wpmdbmf_migrate_media',
+					action: 			'wpsdbmf_migrate_media',
 					file_chunk:			file_chunk_to_migrate,
 					remote_uploads_url: args.remote_uploads_url,
 					intent:				migration_type(),
@@ -231,13 +231,13 @@ var connection_info;
 				},
 				success: function(data){
 					original_data = data;
-					data = wpmdb_parse_json( $.trim( data ) );
+					data = wpsdb_parse_json( $.trim( data ) );
 					if( false == data ) {
 						migration_failed( original_data );
 						return;
 					}
 
-					if( typeof data.wpmdb_error != 'undefined' && data.wpmdb_error == 1 ){
+					if( typeof data.wpsdb_error != 'undefined' && data.wpsdb_error == 1 ){
 						non_fatal_errors += data.body;
 					}
 
@@ -248,7 +248,7 @@ var connection_info;
 					overall_percent = Math.floor(percent);
 
 					$('.progress-text').html(overall_percent + '% - Migrating media files');
-					$('.media-migration-current-image').html( wpmdb_add_commas( args.media_progress_image_number ) );
+					$('.media-migration-current-image').html( wpsdb_add_commas( args.media_progress_image_number ) );
 
 					migrate_media_files_recursive( args );
 				}
