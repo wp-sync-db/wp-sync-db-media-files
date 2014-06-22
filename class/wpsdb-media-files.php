@@ -390,7 +390,7 @@ class WPSDB_Media_Files extends WPSDB_Addon {
 		$return = array(
 			'success' 	=> 1,
 		);
-		$result = $this->serialize( json_encode( $return ) );
+		$result = serialize( json_encode( $return ) );
 		return $result;
 	}
 
