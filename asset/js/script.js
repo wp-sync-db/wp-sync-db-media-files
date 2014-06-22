@@ -115,7 +115,8 @@ var connection_info;
           intent: migration_type(),
           url: connection_info[0],
           key: connection_info[1],
-          temp_prefix: connection_data.temp_prefix
+          temp_prefix: connection_data.temp_prefix,
+					nonce: wpsdb_nonces.determine_media_to_migrate,
         },
         error: function(jqXHR, textStatus, errorThrown) {
           $('.progress-title').html('Migration failed');
@@ -228,6 +229,7 @@ var connection_info;
           intent: migration_type(),
           url: connection_info[0],
           key: connection_info[1],
+					nonce: wpsdb_nonces.migrate_media,
         },
         error: function(jqXHR, textStatus, errorThrown) {
           $('.progress-title').html('Migration failed');
