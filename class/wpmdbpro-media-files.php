@@ -9,7 +9,7 @@ class WPMDBPro_Media_Files extends WPMDBPro_Addon {
 		$this->plugin_slug = 'wp-migrate-db-pro-media-files';
 		$this->plugin_version = $GLOBALS['wpmdb_meta']['wp-migrate-db-pro-media-files']['version'];
 
-		if( ! $this->meets_version_requirements( '1.3.5' ) ) return;
+		if( ! $this->meets_version_requirements( '1.4b1' ) ) return;
 
 		add_action( 'wpmdb_after_advanced_options', array( $this, 'migration_form_controls' ) );
 		add_action( 'wpmdb_load_assets', array( $this, 'load_assets' ) );
@@ -17,6 +17,9 @@ class WPMDBPro_Media_Files extends WPMDBPro_Addon {
 		add_filter( 'wpmdb_accepted_profile_fields', array( $this, 'accepted_profile_fields' ) );
 		add_filter( 'wpmdb_establish_remote_connection_data', array( $this, 'establish_remote_connection_data' ) );
 		add_filter( 'wpmdb_nonces', array( $this, 'add_nonces' ) );
+
+		// compatibility with CLI migraitons
+		add_filter( 'wpmdb_cli_finalize_migration', array( $this, 'cli_migration' ), 10, 4 );
 
 		// internal AJAX handlers
 		add_action( 'wp_ajax_wpmdbmf_determine_media_to_migrate', array( $this, 'ajax_determine_media_to_migrate' ) );
@@ -103,20 +106,20 @@ class WPMDBPro_Media_Files extends WPMDBPro_Addon {
 	}
 
 	function process_attachment_data( $attachment ) {
-		if( isset( $attachment['blog_id'] ) ) { // used for multisite
-			if( defined( 'UPLOADBLOGSDIR' ) ) {
+		if ( isset( $attachment['blog_id'] ) ) { // used for multisite
+			if ( defined( 'UPLOADBLOGSDIR' ) ) {
 				$upload_dir = sprintf( '%s/files/', $attachment['blog_id'] );
-			}
-			else {
+			} else {
 				$upload_dir = sprintf( 'sites/%s/', $attachment['blog_id'] );
 			}
 			$attachment['file'] = $upload_dir . $attachment['file'];
 		}
 		$upload_dir = str_replace( basename( $attachment['file'] ), '', $attachment['file'] );
-		if( ! empty( $attachment['metadata'] ) ) {
+		if ( ! empty( $attachment['metadata'] ) ) {
 			$attachment['metadata'] = @unserialize( $attachment['metadata'] );
-			if( isset( $attachment['metadata']['sizes'] ) ) {
-				foreach( $attachment['metadata']['sizes'] as $size ) {
+			if ( ! empty( $attachment['metadata']['sizes'] ) && is_array( $attachment['metadata']['sizes'] ) ) {
+				foreach ( $attachment['metadata']['sizes'] as $size ) {
+					if ( empty( $size['file'] ) ) continue;
 					$attachment['sizes'][] = $upload_dir . $size['file'];
 				}
 			}
@@ -155,12 +158,13 @@ class WPMDBPro_Media_Files extends WPMDBPro_Addon {
 		$this->check_ajax_referer( 'migrate-media' );
 		$this->set_time_limit();
 
-		if( $_POST['intent'] == 'pull' ) {
-			$this->process_pull_request();
+		if ( $_POST['intent'] == 'pull' ) {
+			$result = $this->process_pull_request();
+			return $result;
 		}
-		else {
-			$this->process_push_request();
-		}
+
+		$result = $this->process_push_request();
+		return $result;
 	}
 
 	function process_pull_request() {
@@ -180,7 +184,7 @@ class WPMDBPro_Media_Files extends WPMDBPro_Addon {
 			
 			if( is_wp_error( $temp_file_path ) ) {
 				$download_error = $temp_file_path->get_error_message();
-				$errors[] = 'Could not download file: ' . $remote_uploads_url . $file_to_download . ' - ' . $download_error;
+				$errors[] = __( sprintf( 'Could not download file: %1$s - %2$s', $remote_uploads_url . $file_to_download, $download_error ), 'wp-migrate-db-pro-media-files' );
 				continue;
 			}
 
@@ -192,16 +196,16 @@ class WPMDBPro_Media_Files extends WPMDBPro_Addon {
 			if( false === $move_result ) {
 				$folder = dirname( $new_path );
 				if( @file_exists( $folder ) ) {
-					$errors[] =  'Error attempting to move downloaded file. Temp path: ' . $temp_file_path . ' - New Path: ' . $new_path . ' (#103mf)';
+					$errors[] =  __( sprintf( 'Error attempting to move downloaded file. Temp path: %1$s - New Path: %2$s', $temp_file_path, $new_path ), 'wp-migrate-db-pro-media-files' ) . ' (#103mf)';
 				}
 				else{
 					if( false === @mkdir( $folder, 0755, true ) ) {
-						$errors[] =  'Error attempting to create required directory: ' . $folder . ' (#104mf)';
+						$errors[] =  __( sprintf( 'Error attempting to create required directory: %s', $folder ), 'wp-migrate-db-pro-media-files' ) . ' (#104mf)';
 					}
 					else {
 						$move_result = @rename( $temp_file_path, $new_path );
 						if( false === $move_result ) {
-							$errors[] =  'Error attempting to move downloaded file. Temp path: ' . $temp_file_path . ' - New Path: ' . $new_path . ' (#105mf)';
+							$errors[] =  __( sprintf( 'Error attempting to move downloaded file. Temp path: %1$s - New Path: %2$s', $temp_file_path, $new_path ), 'wp-migrate-db-pro-media-files' ) . ' (#105mf)';
 						}
 					}
 				}
@@ -213,14 +217,14 @@ class WPMDBPro_Media_Files extends WPMDBPro_Addon {
 				'wpmdb_error'	=> 1,
 				'body'			=> implode( '<br />', $errors ) . '<br />'
 			);
-			echo json_encode( $return );
-			exit;
+			$result = $this->end_ajax( json_encode( $return ) );
+			return $result;
 		}
 
 		// not required, just here because we have to return something otherwise the AJAX fails
 		$return['success'] = 1;
-		echo json_encode( $return );
-		exit;
+		$result = $this->end_ajax( json_encode( $return ) );
+		return $result;
 	}
 
 	function process_push_request() {
@@ -247,8 +251,8 @@ class WPMDBPro_Media_Files extends WPMDBPro_Addon {
 		$response = $this->remote_post( $ajax_url, '', __FUNCTION__, $args );
 		$response = $this->verify_remote_post_response( $response );
 
-		echo json_encode( $response );
-		exit;
+		$result = $this->end_ajax( json_encode( $response ) );
+		return $result;
 	}
 
 	function respond_to_push_request() {
@@ -257,19 +261,19 @@ class WPMDBPro_Media_Files extends WPMDBPro_Addon {
 		if ( ! $this->verify_signature( $filtered_post, $this->settings['key'] ) ) {
 			$return = array(
 				'wpmdb_error' 	=> 1,
-				'body'			=> $this->invalid_content_verification_error . ' (#103mf)',
+				'body'			=> $this->invalid_content_verification_error . ' (#101mf)',
 			);
-			echo serialize( $return );
-			exit;
+			$result = $this->end_ajax( serialize( $return ) );
+			return $result;
 		}
 
 		if( ! isset( $_FILES['media'] ) ) {
 			$return = array(
 				'wpmdb_error' 	=> 1,
-				'body'			=> '$_FILES is empty, the upload appears to have failed (#106mf)',
+				'body'			=> __( '$_FILES is empty, the upload appears to have failed', 'wp-migrate-db-pro-media-files' ) . ' (#106mf)',
 			);
-			echo serialize( $return );
-			exit;
+			$result = $this->end_ajax( serialize( $return ) );
+			return $result;
 		}
 
 		$upload_dir = $this->uploads_dir();
@@ -283,13 +287,13 @@ class WPMDBPro_Media_Files extends WPMDBPro_Addon {
 			$folder = dirname( $destination );
 
 			if( false === @file_exists( $folder ) && false === @mkdir( $folder, 0755, true ) ) {
-				$errors[] = 'Error attempting to create required directory: ' . $folder . ' (#108mf)';
+				$errors[] = __( sprintf( 'Error attempting to create required directory: %s', $folder ), 'wp-migrate-db-pro-media-files' ) . ' (#108mf)';
 				++$i;
 				continue;
 			}
 
 			if( false === @move_uploaded_file( $file['tmp_name'], $destination ) ) {
-				$errors[] = sprintf( 'A problem occurred when attempting to move the temp file "%s" to "%s" (#107mf)', $file['tmp_name'], $destination );
+				$errors[] = __( sprintf( 'A problem occurred when attempting to move the temp file "%1$s" to "%2$s"', $file['tmp_name'], $destination ), 'wp-migrate-db-pro-media-files' ) . ' (#107mf)';
 			}
 			++$i;
 		}
@@ -301,8 +305,8 @@ class WPMDBPro_Media_Files extends WPMDBPro_Addon {
 				'body'			=> implode( '<br />', $errors ) . '<br />'
 			);
 		}
-		echo serialize( $return );
-		exit;
+		$result = $this->end_ajax( serialize( $return ) );
+		return $result;
 	}
 
 	function ajax_determine_media_to_migrate() {
@@ -355,8 +359,8 @@ class WPMDBPro_Media_Files extends WPMDBPro_Addon {
 			}
 		}
 
-		echo json_encode( $return );
-		exit;
+		$result = $this->end_ajax( json_encode( $return ) );
+		return $result;
 	}
 
 	function respond_to_remove_local_attachments() {
@@ -367,18 +371,18 @@ class WPMDBPro_Media_Files extends WPMDBPro_Addon {
 				'wpmdb_error' 	=> 1,
 				'body'			=> $this->invalid_content_verification_error . ' (#109mf)',
 			);
-			echo serialize( $return );
-			exit;
+			$result = $this->end_ajax( serialize( $return ) );
+			return $result;
 		}
 
 		$remote_attachments = @unserialize( $filtered_post['remote_attachments'] );
 		if( false === $remote_attachments ) {
 			$return = array(
 				'wpmdb_error' 	=> 1,
-				'body'			=> 'Error attempting to unserialize the remote attachment data (#110mf)',
+				'body'			=> __( 'Error attempting to unserialize the remote attachment data', 'wp-migrate-db-pro-media-files' ) . ' (#110mf)',
 			);
-			echo serialize( $return );
-			exit;
+			$result = $this->end_ajax( serialize( $return ) );
+			return $result;
 		}
 
 		$this->remove_local_attachments( $remote_attachments );
@@ -386,8 +390,8 @@ class WPMDBPro_Media_Files extends WPMDBPro_Addon {
 		$return = array(
 			'success' 	=> 1,
 		);
-		echo serialize( $return );
-		exit;
+		$result = $this->serialize( json_encode( $return ) );
+		return $result;
 	}
 
 	function remove_local_attachments( $remote_attachments ) {
@@ -458,8 +462,8 @@ class WPMDBPro_Media_Files extends WPMDBPro_Addon {
 				'wpmdb_error' 	=> 1,
 				'body'			=> $this->invalid_content_verification_error . ' (#100mf)',
 			);
-			echo serialize( $return );
-			exit;
+			$result = $this->end_ajax( serialize( $return ) );
+			return $result;
 		}
 
 		if( defined( 'UPLOADBLOGSDIR' ) ) {
@@ -476,8 +480,8 @@ class WPMDBPro_Media_Files extends WPMDBPro_Addon {
 		$return['remote_media'] = $this->get_local_media();
 		$return['remote_uploads_url'] = $upload_url;
 
-		echo serialize( $return );
-		exit;
+		$result = $this->end_ajax( serialize( $return ) );
+		return $result;
 	}
 
 	function migration_form_controls() {
@@ -494,7 +498,17 @@ class WPMDBPro_Media_Files extends WPMDBPro_Addon {
 		$plugins_url = trailingslashit( plugins_url() ) . trailingslashit( $this->plugin_folder_name );
 		$src = $plugins_url . 'asset/js/script.js';
 		$version = defined('SCRIPT_DEBUG') && SCRIPT_DEBUG ? time() : $this->plugin_version;
-		wp_enqueue_script( 'wp-migrate-db-pro-media-files-script', $src, array( 'jquery' ), $version, true );
+		wp_enqueue_script( 'wp-migrate-db-pro-media-files-script', $src, array( 'jquery', 'wp-migrate-db-pro-common', 'wp-migrate-db-pro-hook', 'wp-migrate-db-pro-script' ), $version, true );
+	
+		wp_localize_script( 'wp-migrate-db-pro-media-files-script', 'wpmdbmf_strings', array(
+			'determining'				=> __( "Determining which media files to migrate, please wait...", 'wp-migrate-db-pro-media-files' ),
+			'error_determining'			=> __( "Error while attempting to determine which media files to migrate.", 'wp-migrate-db-pro-media-files' ),
+			'migration_failed'			=> __( "Migration failed", 'wp-migrate-db-pro-media-files' ),
+			'problem_migrating_media'	=> __( "A problem occurred when migrating the media files.", 'wp-migrate-db-pro-media-files' ),
+			'media_files'				=> __( "Media Files", 'wp-migrate-db-pro-media-files' ),
+			'migrating_media_files'		=> __( "Migrating media files", 'wp-migrate-db-pro-media-files' ),
+		) );
+
 	}
 
 	function establish_remote_connection_data( $data ) {
@@ -527,8 +541,7 @@ class WPMDBPro_Media_Files extends WPMDBPro_Addon {
 		$blogs = $wpdb->get_results(
 			"SELECT blog_id
 			FROM {$wpdb->blogs}
-			WHERE site_id = '{$wpdb->siteid}'
-			AND spam = '0'
+			WHERE spam = '0'
 			AND deleted = '0'
 			AND archived = '0'
 			AND blog_id != 1
@@ -575,21 +588,21 @@ class WPMDBPro_Media_Files extends WPMDBPro_Addon {
 	function verify_remote_post_response( $response ) {
 		if ( false === $response ) {
 			$return = array( 'wpmdb_error' => 1, 'body' => $this->error );
-			echo json_encode( $return );
-			exit;
+			$result = $this->end_ajax( json_encode( $return ) );
+			return $result;
 		}
 
 		if ( ! is_serialized( trim( $response ) ) ) {
 			$return = array( 'wpmdb_error'	=> 1, 'body' => $response );
-			echo json_encode( $return );
-			exit;
+			$result = $this->end_ajax( json_encode( $return ) );
+			return $result;
 		}
 
 		$response = unserialize( trim( $response ) );
 
 		if ( isset( $response['wpmdb_error'] ) ) {
-			echo json_encode( $response );
-			exit;
+			$result = $this->end_ajax( json_encode( $response ) );
+			return $result;
 		}
 
 		return $response;
@@ -599,6 +612,69 @@ class WPMDBPro_Media_Files extends WPMDBPro_Addon {
 		$nonces['migrate_media'] = wp_create_nonce( 'migrate-media' );
 		$nonces['determine_media_to_migrate'] = wp_create_nonce( 'determine-media-to-migrate' );
 		return $nonces;
+	}
+
+	function cli_migration( $outcome, $profile, $verify_connection_response, $initiate_migration_response ) {
+		global $wpmdbpro, $wpmdbpro_cli;
+		if ( true !== $outcome ) return $outcome;
+		if ( !isset( $profile['media_files'] ) || '1' !== $profile['media_files'] ) return $outcome;
+
+		if ( !isset( $verify_connection_response['media_files_max_file_uploads'] ) ) {
+			return $wpmdbpro_cli->cli_error( __( 'WP Migrate DB Pro Media Files does not seems to be installed/active on the remote website.', 'wp-migrate-db-pro-media-files' ) );
+		}
+
+		$this->set_time_limit();
+		$wpmdbpro->set_cli_migration();
+		$this->set_cli_migration();
+		
+		$connection_info = explode( "\n", $profile['connection_info'] );
+
+		$_POST['intent'] = $profile['action'];
+		$_POST['url'] = trim( $connection_info[0] );
+		$_POST['key'] = trim( $connection_info[1] );
+		$_POST['remove_local_media'] = ( isset( $profile['remove_local_media'] ) ) ? 1 : 0;
+		$_POST['temp_prefix'] = $verify_connection_response['temp_prefix'];
+
+		do_action( 'wpmdb_cli_before_determine_media_to_migrate', $profile, $verify_connection_response, $initiate_migration_response );
+
+		$response = $this->ajax_determine_media_to_migrate();
+		if( is_wp_error( $determine_media_to_migrate_response = $wpmdbpro_cli->verify_cli_response( $response, 'ajax_determine_media_to_migrate()' ) ) ) return $determine_media_to_migrate_response;
+
+		$remote_uploads_url = $determine_media_to_migrate_response['remote_uploads_url'];
+		$files_to_migrate = $determine_media_to_migrate_response['files_to_migrate'];
+		// seems like this value needs to be different depending on pull/push?
+		$bottleneck = $wpmdbpro->get_bottleneck();
+
+		while ( !empty( $files_to_migrate ) ) {
+			$file_chunk_to_migrate = array();
+			$file_chunk_size = 0;
+			$number_of_files_to_migrate = 0;
+			foreach ( $files_to_migrate as $file_to_migrate => $file_size ) {
+				if ( empty( $file_chunk_to_migrate ) ) {
+					$file_chunk_to_migrate[] = $file_to_migrate;
+					$file_chunk_size += $file_size;
+					unset( $files_to_migrate[$file_to_migrate] );
+					++$number_of_files_to_migrate;
+				} else {
+					if ( ( $file_chunk_size + $file_size ) > $bottleneck || $number_of_files_to_migrate >= $verify_connection_response['media_files_max_file_uploads'] ) {
+						break;
+					} else {
+						$file_chunk_to_migrate[] = $file_to_migrate;
+						$file_chunk_size += $file_size;
+						unset( $files_to_migrate[$file_to_migrate] );
+						++$number_of_files_to_migrate;
+					}
+				}
+
+				$_POST['file_chunk'] = $file_chunk_to_migrate;
+				$_POST['remote_uploads_url'] = $remote_uploads_url;
+
+				$response = $this->ajax_migrate_media();
+				if( is_wp_error( $migrate_media_response = $wpmdbpro_cli->verify_cli_response( $response, 'ajax_migrate_media()' ) ) ) return $migrate_media_response;
+			}
+		}
+
+		return true;
 	}
 
 }

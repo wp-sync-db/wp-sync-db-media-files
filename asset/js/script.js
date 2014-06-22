@@ -3,6 +3,7 @@ var determine_media_to_migrate;
 var remote_media_files_unavailable = false;
 var remote_connection_data;
 var connection_info;
+var media_successfully_determined;
 
 (function($) {
 
@@ -17,17 +18,16 @@ var connection_info;
 
 	$(document).ready(function() {
 
-		$.wpmdb.add_action( 'ready', function() { 
-			if( migration_type() == 'savefile' ){
-				$('.media-files-options').hide();
-			}
-		});
+		if( migration_type() == 'savefile' ){
+			$('.media-files-options').hide();
+		}
 
 		var disable_media_files_option = function() {
 			$('#media-files').attr('data-available', '0');
 			$('#media-files').prop('checked',false);
 			$('#media-files').attr('disabled','disabled');
 			$('.media-files').addClass('disabled');
+			$('.media-files-options .expandable-content').hide();
 		};
 
 		var hide_show_options = function( unavailable ) {
@@ -88,7 +88,7 @@ var connection_info;
 
 		determine_media_to_migrate = function() {
 			connection_info = $.trim( $('.pull-push-connection-info').val() ).split("\n");
-			$('.progress-text').html('Determining which media files to migrate, please wait...');
+			$('.progress-text').html( wpmdbmf_strings.determining );
 
 			var remove_local_media = 0;
 
@@ -111,8 +111,8 @@ var connection_info;
 					nonce:				wpmdb_nonces.determine_media_to_migrate,
 				},
 				error: function(jqXHR, textStatus, errorThrown){
-					$('.progress-title').html('Migration failed');
-					$('.progress-text').html('Error while attempting to determine which media files to migrate. (#101mf)');
+					$('.progress-title').html( wpmdbmf_strings.migration_failed );
+					$('.progress-text').html( wpmdbmf_strings.error_determining + ' (#101mf)' );
 					$('.progress-text').addClass('migration-error');
 					console.log( jqXHR );
 					console.log( textStatus );
@@ -129,7 +129,8 @@ var connection_info;
 						return;
 					}
 
-					media_successfully_determined( data );
+					next_step_in_migration = { fn: media_successfully_determined, args: [ data ] };
+					execute_next_step();
 				}
 
 			});
@@ -137,17 +138,18 @@ var connection_info;
 		}
 
 		function migration_failed( data ) {
-			$('.progress-title').html('Migration failed');
+			$('.progress-title').html( wpmdbmf_strings.migration_failed );
 			$('.progress-text').html(data);
 			$('.progress-text').addClass('migration-error');
 			migration_error = true;
 			migration_complete_events();
 		}
 
-		function media_successfully_determined( data ) {
+		media_successfully_determined = function( data ) {
 			if( typeof data.wpmdb_error != 'undefined' && data.wpmdb_error == 1 ){
 				non_fatal_errors += data.body;
-				wpmdb_call_next_hook();
+				next_step_in_migration = { fn: wpmdb_call_next_hook };
+				execute_next_step();
 				return;
 			}
 
@@ -167,9 +169,10 @@ var connection_info;
 			$('.progress-tables').empty();
 			$('.progress-tables-hover-boxes').empty();
 
-			$('.progress-tables').prepend('<div title="Media Files" style="width: 100%;" class="progress-chunk media_files"><span>Media Files (<span class="media-migration-current-image">0</span> / ' + wpmdb_add_commas( Object.size( args.files_to_migrate ) ) + ')</span></div>');
+			$('.progress-tables').prepend('<div title="' + wpmdbmf_strings.media_files + '" style="width: 100%;" class="progress-chunk media_files"><span>' + wpmdbmf_strings.media_files + ' (<span class="media-migration-current-image">0</span> / ' + wpmdb_add_commas( Object.size( args.files_to_migrate ) ) + ')</span></div>');
 
-			migrate_media_files_recursive( args );
+			next_step_in_migration = { fn: migrate_media_files_recursive, args: [ args ] };
+			execute_next_step();
 		}
 
 		function migrate_media_files_recursive( args ) {
@@ -222,7 +225,7 @@ var connection_info;
 				},
 				error: function(jqXHR, textStatus, errorThrown){
 					$('.progress-title').html('Migration failed');
-					$('.progress-text').html('A problem occurred when migrating the media files. (#102mf)');
+					$('.progress-text').html( wpmdbmf_strings.problem_migrating_media + ' (#102mf)');
 					$('.progress-text').addClass('migration-error');
 					console.log( jqXHR );
 					console.log( textStatus );
@@ -249,10 +252,11 @@ var connection_info;
 					$('.progress-bar').width(percent + '%');
 					overall_percent = Math.floor(percent);
 
-					$('.progress-text').html(overall_percent + '% - Migrating media files');
+					$('.progress-text').html(overall_percent + '% - ' + wpmdbmf_strings.migrating_media_files);
 					$('.media-migration-current-image').html( wpmdb_add_commas( args.media_progress_image_number ) );
 
-					migrate_media_files_recursive( args );
+					next_step_in_migration = { fn: migrate_media_files_recursive, args: [ args ] };
+					execute_next_step();
 				}
 
 			});
