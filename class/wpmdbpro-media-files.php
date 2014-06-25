@@ -9,7 +9,7 @@ class WPMDBPro_Media_Files extends WPMDBPro_Addon {
 		$this->plugin_slug = 'wp-migrate-db-pro-media-files';
 		$this->plugin_version = $GLOBALS['wpmdb_meta']['wp-migrate-db-pro-media-files']['version'];
 
-		if( ! $this->meets_version_requirements( '1.4b1' ) ) return;
+		if( ! $this->meets_version_requirements( '1.4' ) ) return;
 
 		add_action( 'wpmdb_after_advanced_options', array( $this, 'migration_form_controls' ) );
 		add_action( 'wpmdb_load_assets', array( $this, 'load_assets' ) );
@@ -557,14 +557,25 @@ class WPMDBPro_Media_Files extends WPMDBPro_Addon {
 
 	function download_url( $url, $timeout = 300 ) {
 		//WARNING: The file is not automatically deleted, The script must unlink() the file.
-		if ( ! $url )
-			return new WP_Error('http_no_url', __('Invalid URL Provided.'));
+		if ( ! $url ) {
+			return new WP_Error( 'http_no_url', __( 'Invalid URL Provided.' ) );
+		}
 
-		$tmpfname = wp_tempnam($url);
-		if ( ! $tmpfname )
-			return new WP_Error('http_no_file', __('Could not create Temporary file.'));
+		$tmpfname = wp_tempnam( $url );
+		if ( ! $tmpfname ) {
+			return new WP_Error( 'http_no_file', __( 'Could not create Temporary file.' ) );
+		}
 
-		$response = wp_remote_get( $url, array( 'timeout' => $timeout, 'stream' => true, 'filename' => $tmpfname, 'reject_unsafe_urls' => false ) );
+		$sslverify = ( 1 == $this->settings['verify_ssl'] ) ? true : false;
+		$args = array( 
+			'timeout' => $timeout,
+			'stream' => true,
+			'filename' => $tmpfname,
+			'reject_unsafe_urls' => false,
+			'sslverify' => $sslverify,
+		);
+
+		$response = wp_remote_get( $url, $args );
 
 		if ( is_wp_error( $response ) ) {
 			unlink( $tmpfname );
