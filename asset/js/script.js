@@ -66,12 +66,7 @@ var media_successfully_determined;
 
 		$.wpmdb.add_action( 'move_connection_info_box', function() { 
 			hide_show_options( remote_media_files_unavailable );
-			$('.remove-scope-1').html('remote');
-			$('.remove-scope-2').html('local');
-			if( migration_type() == 'pull' ){
-				$('.remove-scope-1').html('local');
-				$('.remove-scope-2').html('remote');
-			}
+			action_text_toggle();
 		});
 
 		$.wpmdb.add_action( 'verify_connection_to_remote_site', function( connection_data ) {
@@ -88,12 +83,21 @@ var media_successfully_determined;
 
 		determine_media_to_migrate = function() {
 			connection_info = $.trim( $('.pull-push-connection-info').val() ).split("\n");
-			$('.progress-text').html( wpmdbmf_strings.determining );
 
 			var remove_local_media = 0;
+			var copy_entire_media = 0;
 
-			if( $('#remove-local-media').is(':checked') ) {
-				remove_local_media = 1;
+			var media_type = $('input[name="media_migration_option"]:checked').val();
+
+			if ( 'compare' == media_type ) {
+				$('.progress-text').html( wpmdbmf_strings.determining );
+
+				if( $('#remove-local-media').is(':checked') ) {
+					remove_local_media = 1;
+				}
+			} else {
+				$('.progress-text').html( wpmdbmf_strings.migrating_media_files );
+				copy_entire_media = 1;
 			}
 
 			$.ajax({
@@ -104,6 +108,7 @@ var media_successfully_determined;
 				data: {
 					action: 			'wpmdbmf_determine_media_to_migrate',
 					remove_local_media:	remove_local_media,
+					copy_entire_media:	copy_entire_media,
 					intent:				migration_type(),
 					url: 				connection_info[0],
 					key: 				connection_info[1],
@@ -112,7 +117,7 @@ var media_successfully_determined;
 				},
 				error: function(jqXHR, textStatus, errorThrown){
 					$('.progress-title').html( wpmdbmf_strings.migration_failed );
-					$('.progress-text').html( wpmdbmf_strings.error_determining + ' (#101mf)' );
+					$('.progress-text').html( wpmdbGetAjaxErrors( wpmdbmf_strings.error_determining, '(#101mf)', jqXHR.responseText, jqXHR ) );
 					$('.progress-text').addClass('migration-error');
 					console.log( jqXHR );
 					console.log( textStatus );
@@ -139,7 +144,7 @@ var media_successfully_determined;
 
 		function migration_failed( data ) {
 			$('.progress-title').html( wpmdbmf_strings.migration_failed );
-			$('.progress-text').html(data);
+			$('.progress-text').html( wpmdbGetAjaxErrors( '', '', data ) );
 			$('.progress-text').addClass('migration-error');
 			migration_error = true;
 			migration_complete_events();
@@ -225,7 +230,7 @@ var media_successfully_determined;
 				},
 				error: function(jqXHR, textStatus, errorThrown){
 					$('.progress-title').html('Migration failed');
-					$('.progress-text').html( wpmdbmf_strings.problem_migrating_media + ' (#102mf)');
+					$('.progress-text').html( wpmdbGetAjaxErrors( wpmdbmf_strings.problem_migrating_media, '(#102mf)', jqXHR.responseText, jqXHR ) );
 					$('.progress-text').addClass('migration-error');
 					console.log( jqXHR );
 					console.log( textStatus );
@@ -270,6 +275,20 @@ var media_successfully_determined;
 		function migration_type() {
 			return $('input[name=action]:checked').val();	
 		}
+
+		function action_text_toggle() {
+			$('.action-text').hide();
+			$('.action-text.' + migration_type() ).show();
+		}
+
+		$('input[name="media_migration_option"]').change(function () {
+			if ($(this).is(':checked') && $(this).val() == 'entire') {
+				$('#remove-local-media').prop("disabled", true);
+				$('#remove-local-media').prop("checked", false);
+			} else {
+				$('#remove-local-media').prop("disabled", false);
+			}
+		});
 
 	});
 

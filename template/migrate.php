@@ -7,12 +7,39 @@
 	</label>
 	
 	<div class="indent-wrap expandable-content">
-		
+		<?php
+		$media_migration_option = isset( $loaded_profile['media_migration_option'] ) ? $loaded_profile['media_migration_option'] : 'compare';
+		?>
 		<ul>
-			<li id="remove-local-media-list-item">
-				<label for="remove-local-media" class="remove-local-media">
-				<input type="checkbox" name="remove_local_media" value="1" id="remove-local-media"<?php echo ( isset( $loaded_profile['remove_local_media'] ) ? ' checked="checked"' : '' ); ?> />
-				<?php _e( 'Remove <span class="remove-scope-1">local</span> media files that are not found on the <span class="remove-scope-2">remote</span> site', 'wp-migrate-db-pro-media-files' ); ?>
+			<li id="compare-media-list-item">
+				<label for="compare-media" class="compare-media">
+					<input type="radio" name="media_migration_option" value="compare" id="compare-media"<?php checked( $media_migration_option, 'compare', true ); ?> />
+					<span class="action-text push">
+						<?php _e( 'Compare remote and local media files and only upload those missing or updated', 'wp-migrate-db-pro-media-files' ); ?>
+					</span>
+					<span class="action-text pull">
+						<?php _e( 'Compare remote and local media files and only download those missing or updated', 'wp-migrate-db-pro-media-files' ); ?>
+					</span>
+				</label>
+				<label for="remove-local-media" class="remove-local-media sub-option">
+					<input type="checkbox" name="remove_local_media" value="1" id="remove-local-media"<?php echo( isset( $loaded_profile['remove_local_media'] ) ? ' checked="checked"' : '' ); ?> />
+					<span class="action-text push">
+						<?php _e( 'Remove remote media files that are not found on the local site', 'wp-migrate-db-pro-media-files' ); ?>
+					</span>
+					<span class="action-text pull">
+						<?php _e( 'Remove local media files that are not found on the remote site', 'wp-migrate-db-pro-media-files' ); ?>
+					</span>
+				</label>
+			</li>
+			<li id="copy-entire-media-list-item">
+				<label for="copy-entire-media" class="copy-entire-media">
+					<input type="radio" name="media_migration_option" value="entire" id="copy-entire-media"<?php checked( $media_migration_option, 'entire', true ); ?> />
+					<span class="action-text push">
+						<?php _e( 'Remove all remote media files and upload all local media files (skips comparison)', 'wp-migrate-db-pro-media-files' ); ?>
+					</span>
+					<span class="action-text pull">
+						<?php _e( 'Remove all local media files and download all remote media files (skips comparison)', 'wp-migrate-db-pro-media-files' ); ?>
+					</span>
 				</label>
 			</li>
 		</ul>
