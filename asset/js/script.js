@@ -132,7 +132,7 @@ var media_successfully_determined;
         },
         success: function(data) {
           original_data = data;
-          data = wpsdb_parse_json($.trim(data));
+          data = JSON.parse($.trim(data));
           if (false == data) {
             migration_failed(original_data);
             return;
@@ -260,7 +260,7 @@ var media_successfully_determined;
         },
         success: function(data) {
           original_data = data;
-          data = wpsdb_parse_json($.trim(data));
+          data = JSON.parse($.trim(data));
           if (false == data) {
             migration_failed(original_data);
             return;
