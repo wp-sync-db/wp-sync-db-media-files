@@ -4,7 +4,7 @@ Plugin Name: WP Migrate DB Pro Media Files
 Plugin URI: http://deliciousbrains.com/wp-migrate-db-pro/
 Description: An extension to WP Migrate DB Pro, allows the migration of media files.
 Author: Delicious Brains
-Version: 1.2
+Version: 1.3.1
 Author URI: http://deliciousbrains.com
 Network: True
 */
@@ -35,9 +35,11 @@ add_action( 'admin_init', 'wp_migrate_db_pro_media_files_init', 20 );
 /**
  * Populate the $wpmdbpro_media_files global with an instance of the WPMDBPro_Media_Filesclass and return it.
  *
+ * @param bool $cli Running in WP-CLI environment.
+ *
  * @return WPMDBPro_Media_Files The one true global instance of the WPMDBPro_Media_Files class.
  */
-function wp_migrate_db_pro_media_files() {
+function wp_migrate_db_pro_media_files( $cli = false ) {
 	global $wpmdbpro_media_files;
 
 	if ( ! is_null( $wpmdbpro_media_files ) ) {
@@ -53,7 +55,13 @@ function wp_migrate_db_pro_media_files() {
 
 	require_once dirname( __FILE__ ) . '/class/wpmdbpro-media-files.php';
 
-	$wpmdbpro_media_files = new WPMDBPro_Media_Files( __FILE__ );
+	if ( $cli ) {
+		require_once dirname( __FILE__ ) . '/class/wpmdbpro-media-files-cli.php';
+
+		$wpmdbpro_media_files = new WPMDBPro_Media_Files_CLI( __FILE__ );
+	} else {
+		$wpmdbpro_media_files = new WPMDBPro_Media_Files( __FILE__ );
+	}
 
 	return $wpmdbpro_media_files;
 }
@@ -70,6 +78,6 @@ function wp_migrate_db_pro_media_files_before_cli_load() {
 	// Force load the Media Files addon
 	add_filter( 'wp_migrate_db_pro_media_files_force_load', '__return_true' );
 
-	wp_migrate_db_pro_media_files();
+	wp_migrate_db_pro_media_files( true );
 }
 add_action( 'wp_migrate_db_pro_cli_before_load', 'wp_migrate_db_pro_media_files_before_cli_load' );

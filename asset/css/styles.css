@@ -1,3 +1,11 @@
 .sub-option {
 	margin: 5px 0 0 25px;
 }
+
+.media-progress {
+	display: none;
+}
+
+.media.progress-text {
+	margin-bottom: 15px;
+}
