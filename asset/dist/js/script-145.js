@@ -352,11 +352,14 @@ wpmdb.mediaFiles = {
 					wpmdb.current_migration.model.addStageItem( 'media', filepath, parseInt( data / 1024 ) );
 				} );
 
+				wpmdb.current_migration.fixProgressStageWidthForScrollBar();
+
 				var percent =  Math.min( 100, 100 * args.determine_progress / args.attachment_count );
 				var overall_percent = Math.floor( percent );
 
 				// Not "real" progress as far as model is concerned, so we force the progress bar to show media determine progress by accessing it directly
-				$( '.progress-bar', '.migration-progress-stage-container[data-stage=media] .stage-progress' ).width( percent + '%' );
+				$( '.migration-progress-stage-container[data-stage=media]' ).addClass( 'determining-media' );
+				$( '.progress-bar', '.stage-progress.media' ).width( percent + '%' );
 				wpmdb.current_migration.setText( overall_percent + '% - ' + wpmdbmf_strings.determining );
 
 				wpmdb.common.next_step_in_migration = {
@@ -384,6 +387,8 @@ wpmdb.mediaFiles = {
 
 		var title = 'migrate_media_files_' + wpmdb_migration_type();
 		wpmdb.current_migration.setText( wpmdbmf_strings[ title ] );
+
+		$( '.migration-progress-stage-container[data-stage=media]' ).removeClass( 'determining-media' );
 
 		wpmdb.common.next_step_in_migration = { fn: migrate_media_files_recursive, args: [ args ] };
 		wpmdb.functions.execute_next_step();

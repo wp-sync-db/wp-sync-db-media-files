@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: wp-migrate-db-pro-media-files\n"
 "Report-Msgid-Bugs-To: nom@deliciousbrains.com\n"
-"POT-Creation-Date: 2016-04-25 09:11-0700\n"
+"POT-Creation-Date: 2016-07-11 18:30-0700\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -27,7 +27,7 @@ msgstr ""
 msgid "Initiating media migration..."
 msgstr ""
 
-#: class/wpmdbpro-media-files-base.php:562
+#: class/wpmdbpro-media-files-base.php:566
 #, php-format
 msgid "Could not delete \"%s\""
 msgstr ""

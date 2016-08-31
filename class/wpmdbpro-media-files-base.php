@@ -388,9 +388,14 @@ class WPMDBPro_Media_Files_Base extends WPMDBPro_Addon {
 			return;
 		}
 		foreach ( $attachment['sizes'] as $size ) {
+			$original_file_name = $size['file'];
+			// if dir_prefix is set, then the remote is a multisite and we need to compare the file without the subsite directory prefix
+			if ( ! is_multisite() && $attachment['dir_prefix'] ) {
+				$size['file'] = str_replace( $attachment['dir_prefix'], '', $size['file'] );
+			}
 			if ( isset( $size['file_size'] ) && ( ! $local_attachment || ( $local_attachment && ! $this->local_image_size_file_exists( $size, $local_attachment ) ) ) ) {
 				// if the remote image size file exists on the remote file system
-				$files_to_migrate[ $size['file'] ] = $size['file_size'];
+				$files_to_migrate[ $original_file_name ] = $size['file_size'];
 			}
 		}
 	}
@@ -479,11 +484,10 @@ class WPMDBPro_Media_Files_Base extends WPMDBPro_Addon {
 		}
 
 		$filename = $attachment['file'];
-		if ( ! $this->is_current_blog( $attachment['blog_id'] ) ) {
-			// if not default blog strip the site dir prefix from the filename for searching
-			$site_prefix = $this->get_dir_prefix( $attachment );
-			$filename    = str_replace( $site_prefix, '', $filename );
-		}
+
+		$dir_prefix = ( isset( $attachment['dir_prefix'] ) && strlen( $attachment['dir_prefix'] ) ) ? $attachment['dir_prefix'] : $this->get_dir_prefix( $attachment );
+		// file names are stored in DB without dir prefix, so if the file has one then we need to remove it
+		$filename = str_replace( $dir_prefix, '', $filename );
 
 		$local_attachment = $this->get_attachment_results( $prefix, 'row', array( $attachment['blog_id'], $filename ) );
 
@@ -506,13 +510,13 @@ class WPMDBPro_Media_Files_Base extends WPMDBPro_Addon {
 	 * @return array The updated attachment
 	 */
 	function process_attachment_data( $attachment ) {
-		// get any site directory prefix for multisite blogs
-		if ( ! $this->is_current_blog( $attachment['blog_id'] ) ) {
-			$upload_dir         = $this->get_dir_prefix( $attachment );
-			$attachment['file'] = $upload_dir . $attachment['file'];
+		// prepend site directory prefix for multisite blogs
+		$attachment['dir_prefix'] = $this->get_dir_prefix( $attachment );
+		if ( is_multisite() && $attachment['dir_prefix'] ) {
+			$attachment['file'] = $attachment['dir_prefix'] . $attachment['file'];
 		}
 
-		// use the correct directory to use for image size files
+		// use the correct directory for image size files
 		$upload_dir = str_replace( basename( $attachment['file'] ), '', $attachment['file'] );
 		if ( ! empty( $attachment['metadata'] ) ) {
 			$attachment['metadata'] = @unserialize( $attachment['metadata'] );
@@ -558,7 +562,7 @@ class WPMDBPro_Media_Files_Base extends WPMDBPro_Addon {
 		$upload_dir = $this->uploads_dir();
 
 		foreach ( $local_files as $local_file ) {
-			if ( false === $this->filesystem->unlink( $upload_dir . $local_file ) ) {
+			if ( false === $this->filesystem->unlink( $upload_dir . $local_file ) && $this->filesystem->file_exists( $upload_dir . $local_file ) ) {
 				$errors[] = sprintf( __( 'Could not delete "%s"', 'wp-migrate-db-pro-media-files' ), $upload_dir . $local_file ) . ' (#122mf)';
 			}
 		}
@@ -630,7 +634,7 @@ class WPMDBPro_Media_Files_Base extends WPMDBPro_Addon {
 		}
 
 		// get size of image on disk
-		$size = $this->get_file_size( $attachment['file'] );
+		$size = $this->get_file_size( $attachment['file'], ( isset( $attachment['dir_prefix'] ) ? $attachment['dir_prefix'] : '' ) );
 		if ( false !== $size ) {
 			$attachment['file_size'] = $size;
 		}
@@ -641,14 +645,19 @@ class WPMDBPro_Media_Files_Base extends WPMDBPro_Addon {
 	/**
 	 * Calculate size on disk of a file
 	 *
-	 * @param string $file File path
+	 * @param string $file       File path
+	 * @param string $dir_prefix Multisite blog specific directory
 	 *
 	 * @return int|bool File size if exists, false otherwise
 	 */
-	function get_file_size( $file ) {
+	function get_file_size( $file, $dir_prefix = '' ) {
 		$upload_dir = untrailingslashit( $this->uploads_dir() );
 		if ( ! $this->filesystem->file_exists( $upload_dir ) ) {
 			return false;
+		}
+
+		if ( ! is_multisite() && $dir_prefix ) {
+			$file = str_replace( $dir_prefix, '', $file );
 		}
 
 		$file = $upload_dir . DIRECTORY_SEPARATOR . $file;

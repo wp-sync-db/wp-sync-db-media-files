@@ -34,7 +34,7 @@ class WPMDBPro_Media_Files extends WPMDBPro_Addon {
 		$this->plugin_slug    = 'wp-migrate-db-pro-media-files';
 		$this->plugin_version = $GLOBALS['wpmdb_meta']['wp-migrate-db-pro-media-files']['version'];
 
-		if ( ! $this->meets_version_requirements( '1.6' ) ) {
+		if ( ! $this->meets_version_requirements( '1.6.1' ) ) {
 			return;
 		}
 
@@ -111,12 +111,13 @@ class WPMDBPro_Media_Files extends WPMDBPro_Addon {
 	function load_assets() {
 		$plugins_url = trailingslashit( plugins_url( $this->plugin_folder_name ) );
 		$version     = defined( 'SCRIPT_DEBUG' ) && SCRIPT_DEBUG ? time() : $this->plugin_version;
+		$ver_string  = '-' . str_replace( '.', '', $this->plugin_version );
 		$min         = defined( 'SCRIPT_DEBUG' ) && SCRIPT_DEBUG ? '' : '.min';
 
 		$src = $plugins_url . 'asset/dist/css/styles.css';
 		wp_enqueue_style( 'wp-migrate-db-pro-media-files-styles', $src, array( 'wp-migrate-db-pro-styles' ), $version );
 
-		$src = $plugins_url . "asset/dist/js/script$min.js";
+		$src = $plugins_url . "asset/dist/js/script{$ver_string}{$min}.js";
 		wp_enqueue_script( 'wp-migrate-db-pro-media-files-script', $src, array(
 			'jquery',
 			'wp-migrate-db-pro-common',
