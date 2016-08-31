@@ -1,124 +1,166 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
 msgid ""
 msgstr ""
-"Project-Id-Version: WP Migrate DB Pro Media Files\n"
-"POT-Creation-Date: 2015-01-24 12:38-0000\n"
-"PO-Revision-Date: 2015-01-24 12:38-0000\n"
-"Last-Translator: Delicious Brains <nom@deliciousbrains.com>\n"
-"Language-Team: Delicious Brains <nom@deliciousbrains.com>\n"
-"Language: en\n"
+"Project-Id-Version: wp-migrate-db-pro-media-files\n"
+"Report-Msgid-Bugs-To: nom@deliciousbrains.com\n"
+"POT-Creation-Date: 2015-07-15 15:33-0300\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
 "MIME-Version: 1.0\n"
-"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Type: text/plain; charset=CHARSET\n"
 "Content-Transfer-Encoding: 8bit\n"
-"X-Generator: Poedit 1.7\n"
-"X-Poedit-Basepath: ..\n"
-"X-Poedit-SourceCharset: UTF-8\n"
-"X-Poedit-KeywordsList: __;_e;_n:1,2;_x:1,2c;_ex:1,2c;_nx:4c,1,2;esc_attr__;"
-"esc_attr_e;esc_attr_x:1,2c;esc_html__;esc_html_e;esc_html_x:1,2c;_n_noop:1,2;"
-"_nx_noop:3c,1,2;__ngettext_noop:1,2\n"
-"Plural-Forms: nplurals=2; plural=(n != 1);\n"
-"X-Poedit-SearchPath-0: .\n"
 
-#: class/wpmdbpro-media-files.php:578
-msgid "Failed attempting to process pull request"
-msgstr ""
-
-#: class/wpmdbpro-media-files.php:648
-msgid "$_FILES is empty, the upload appears to have failed"
-msgstr ""
-
-#: class/wpmdbpro-media-files.php:685
-msgid "Failed attempting to respond to push request"
-msgstr ""
-
-#: class/wpmdbpro-media-files.php:774
-msgid "There were errors when removing local media files"
-msgstr ""
-
-#: class/wpmdbpro-media-files.php:888
-msgid "Incorrect migration type supplied"
-msgstr ""
-
-#: class/wpmdbpro-media-files.php:1084
-msgid "There were errors when removing local media files from the remote site"
-msgstr ""
-
-#: class/wpmdbpro-media-files.php:1414
-msgid "Removing all local files before download of remote media"
-msgstr ""
-
-#: class/wpmdbpro-media-files.php:1415
-msgid "Removing all remote files before upload of local media"
-msgstr ""
-
-#: class/wpmdbpro-media-files.php:1416
-msgid "Removing local files that are not found on the remote site"
-msgstr ""
-
-#: class/wpmdbpro-media-files.php:1417
-msgid "Removing remote files that are not found on the local site"
-msgstr ""
-
-#: class/wpmdbpro-media-files.php:1418
-msgid "Determining media to migrate"
-msgstr ""
-
-#: class/wpmdbpro-media-files.php:1419
-#, php-format
-msgid "Determining media to migrate - %1$d of %2$d attachments (%3$d%%)"
-msgstr ""
-
-#: class/wpmdbpro-media-files.php:1420
-msgid "Error while attempting to determine which attachments to migrate."
-msgstr ""
-
-#: class/wpmdbpro-media-files.php:1421
-msgid "Migration failed"
-msgstr ""
-
-#: class/wpmdbpro-media-files.php:1422
-msgid "A problem occurred when migrating the media files."
-msgstr ""
-
-#: class/wpmdbpro-media-files.php:1423
-msgid "Media Attachments"
-msgstr ""
-
-#: class/wpmdbpro-media-files.php:1424
-msgid "Files"
-msgstr ""
-
-#: class/wpmdbpro-media-files.php:1425
-msgid "Downloading files"
-msgstr ""
-
-#: class/wpmdbpro-media-files.php:1426
-msgid "Uploading files"
-msgstr ""
-
-#: class/wpmdbpro-media-files.php:1427
-msgid "Files Uploaded"
-msgstr ""
-
-#: class/wpmdbpro-media-files.php:1428
-msgid "Files Downloaded"
-msgstr ""
-
-#: class/wpmdbpro-media-files.php:1551
-msgid "Invalid URL Provided."
-msgstr ""
-
-#: class/wpmdbpro-media-files.php:1556
-msgid "Could not create Temporary file."
-msgstr ""
-
-#: class/wpmdbpro-media-files.php:1683
+#: class/wpmdbpro-media-files-cli.php:32
 msgid ""
 "WP Migrate DB Pro Media Files does not seem to be installed/active on the "
 "remote website."
 msgstr ""
 
-#: class/wpmdbpro-media-files.php:1686
+#: class/wpmdbpro-media-files-cli.php:35
 msgid "Initiating media migration..."
+msgstr ""
+
+#: class/wpmdbpro-media-files.php:575
+#, php-format
+msgid "Could not download file: %1$s - %2$s"
+msgstr ""
+
+#: class/wpmdbpro-media-files.php:588
+#: class/wpmdbpro-media-files.php:595
+#, php-format
+msgid ""
+"Error attempting to move downloaded file. Temp path: %1$s - New Path: %2$s"
+msgstr ""
+
+#: class/wpmdbpro-media-files.php:591
+#: class/wpmdbpro-media-files.php:712
+#, php-format
+msgid "Error attempting to create required directory: %s"
+msgstr ""
+
+#: class/wpmdbpro-media-files.php:609
+msgid "Failed attempting to process pull request"
+msgstr ""
+
+#: class/wpmdbpro-media-files.php:693
+msgid "$_FILES is empty, the upload appears to have failed"
+msgstr ""
+
+#: class/wpmdbpro-media-files.php:718
+#, php-format
+msgid ""
+"A problem occurred when attempting to move the temp file \"%1$s\" to \"%2$s\""
+msgstr ""
+
+#: class/wpmdbpro-media-files.php:730
+msgid "Failed attempting to respond to push request"
+msgstr ""
+
+#: class/wpmdbpro-media-files.php:835
+msgid "There were errors when removing local media files"
+msgstr ""
+
+#: class/wpmdbpro-media-files.php:988
+msgid "Incorrect migration type supplied"
+msgstr ""
+
+#: class/wpmdbpro-media-files.php:1230
+msgid "There were errors when removing local media files from the remote site"
+msgstr ""
+
+#: class/wpmdbpro-media-files.php:1261
+#, php-format
+msgid "Could not delete \"%s\""
+msgstr ""
+
+#: class/wpmdbpro-media-files.php:1591
+msgid "Removing all local files before download of remote media"
+msgstr ""
+
+#: class/wpmdbpro-media-files.php:1592
+msgid "Removing all remote files before upload of local media"
+msgstr ""
+
+#: class/wpmdbpro-media-files.php:1593
+msgid "Removing local files that are not found on the remote site"
+msgstr ""
+
+#: class/wpmdbpro-media-files.php:1594
+msgid "Removing remote files that are not found on the local site"
+msgstr ""
+
+#: class/wpmdbpro-media-files.php:1595
+msgid "Determining media to migrate"
+msgstr ""
+
+#: class/wpmdbpro-media-files.php:1596
+#, php-format
+msgid "Determining media to migrate - %1$d of %2$d attachments (%3$d%%)"
+msgstr ""
+
+#: class/wpmdbpro-media-files.php:1597
+msgid "Error while attempting to determine which attachments to migrate."
+msgstr ""
+
+#: class/wpmdbpro-media-files.php:1598
+msgid "Migration failed"
+msgstr ""
+
+#: class/wpmdbpro-media-files.php:1599
+msgid "A problem occurred when migrating the media files."
+msgstr ""
+
+#: class/wpmdbpro-media-files.php:1600
+msgid "Media Attachments"
+msgstr ""
+
+#: class/wpmdbpro-media-files.php:1601
+msgid "Files"
+msgstr ""
+
+#: class/wpmdbpro-media-files.php:1602
+msgid "Downloading files"
+msgstr ""
+
+#: class/wpmdbpro-media-files.php:1603
+msgid "Uploading files"
+msgstr ""
+
+#: class/wpmdbpro-media-files.php:1604
+#, php-format
+msgid "Downloading %d of %d files"
+msgstr ""
+
+#: class/wpmdbpro-media-files.php:1605
+#, php-format
+msgid "Uploading %d of %d files"
+msgstr ""
+
+#: class/wpmdbpro-media-files.php:1606
+msgid "Files Uploaded"
+msgstr ""
+
+#: class/wpmdbpro-media-files.php:1607
+msgid "Files Downloaded"
+msgstr ""
+
+#: class/wpmdbpro-media-files.php:1608
+msgid "The following file is too large to migrate:"
+msgstr ""
+
+#: class/wpmdbpro-media-files.php:1739
+msgid "Invalid URL Provided."
+msgstr ""
+
+#: class/wpmdbpro-media-files.php:1744
+msgid "Could not create Temporary file."
 msgstr ""
 
 #: template/migrate.php:6
@@ -168,6 +210,15 @@ msgstr ""
 
 #: template/migrate.php:54
 msgid "Version Mismatch"
+msgstr ""
+
+#: template/migrate.php:54
+#, php-format
+msgid ""
+"We have detected you have version <span class=\"media-file-remote-version"
+"\"></span> of WP Migrate DB Pro Media Files at <span class=\"media-files-"
+"remote-location\"></span> but are using %1$s here. Please go to the <a href="
+"\"%2$s\">Plugins page</a> on both installs and check for updates."
 msgstr ""
 
 #: template/progress.php:3

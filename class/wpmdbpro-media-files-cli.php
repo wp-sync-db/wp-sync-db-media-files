@@ -6,7 +6,7 @@ class WPMDBPro_Media_Files_CLI extends WPMDBPro_Media_Files {
 		parent::__construct( $plugin_file_path );
 
 		// compatibility with CLI migrations
-		add_filter( 'wpmdb_cli_finalize_migration', array( $this, 'cli_migration' ), 10, 4 );
+		add_filter( 'wpmdb_pro_cli_finalize_migration', array( $this, 'cli_migration' ), 10, 4 );
 	}
 
 	/**
@@ -118,44 +118,57 @@ class WPMDBPro_Media_Files_CLI extends WPMDBPro_Media_Files {
 
 			$total_files = count( $files_to_migrate );
 			if ( $total_files > 0 ) {
-				$migrate_bar = new \cli\progress\Bar( $this->get_string( 'migrate_media_files_' . $intent ), 0 );
+				$migrate_bar = new WPMDBPro_Media_Files_CLI_Bar( sprintf( $this->get_string( 'migrate_media_files_cli_' . $intent ), 0, $total_files ), 0 );
 				$migrate_bar->setTotal( $total_size );
-			}
 
-			// start the recursive migration of the files we have just determined
-			while ( ! empty( $files_to_migrate ) ) {
+				$current_file_index = 0;
 
-				$file_chunk_to_migrate      = array();
-				$file_chunk_size            = 0;
-				$number_of_files_to_migrate = 0;
-				foreach ( $files_to_migrate as $file_to_migrate => $file_size ) {
-					if ( empty( $file_chunk_to_migrate ) ) {
-						$file_chunk_to_migrate[] = $file_to_migrate;
-						$file_chunk_size += $file_size;
-						unset( $files_to_migrate[ $file_to_migrate ] );
-						++ $number_of_files_to_migrate;
-					} else {
-						if ( ( $file_chunk_size + $file_size ) > $bottleneck || $number_of_files_to_migrate >= $verify_connection_response['media_files_max_file_uploads'] ) {
-							break;
-						} else {
+				// start the recursive migration of the files we have just determined
+				while ( ! empty( $files_to_migrate ) ) {
+
+					$file_chunk_to_migrate      = array();
+					$file_chunk_size            = 0;
+					$number_of_files_to_migrate = 0;
+					foreach ( $files_to_migrate as $file_to_migrate => $file_size ) {
+						if ( empty( $file_chunk_to_migrate ) ) {
 							$file_chunk_to_migrate[] = $file_to_migrate;
 							$file_chunk_size += $file_size;
 							unset( $files_to_migrate[ $file_to_migrate ] );
 							++ $number_of_files_to_migrate;
+						} else {
+							if ( ( $file_chunk_size + $file_size ) > $bottleneck || $number_of_files_to_migrate >= $verify_connection_response['media_files_max_file_uploads'] ) {
+								break;
+							} else {
+								$file_chunk_to_migrate[] = $file_to_migrate;
+								$file_chunk_size += $file_size;
+								unset( $files_to_migrate[ $file_to_migrate ] );
+								++ $number_of_files_to_migrate;
+							}
 						}
 					}
-				}
 
-				$_POST['file_chunk']         = $file_chunk_to_migrate;
-				$_POST['remote_uploads_url'] = $remote_uploads_url;
+					$current_file_index += $number_of_files_to_migrate;
+					$migrate_bar->setMessage( sprintf( $this->get_string( 'migrate_media_files_cli_' . $intent ), $current_file_index, $total_files ) );
 
-				$response = $this->ajax_migrate_media();
-				if ( is_wp_error( $migrate_media_response = $wpmdbpro_cli->verify_cli_response( $response, 'ajax_migrate_media()' ) ) ) {
-					return $migrate_media_response;
-				}
+					$_POST['file_chunk']         = $file_chunk_to_migrate;
+					$_POST['remote_uploads_url'] = $remote_uploads_url;
 
-				$migrate_bar->tick( $file_chunk_size );
-			} // END recursive media migration
+
+					do_action( 'wpmdb_media_files_cli_before_migrate_media' );
+
+					$response = $this->ajax_migrate_media();
+					if ( is_wp_error( $migrate_media_response = $wpmdbpro_cli->verify_cli_response( $response, 'ajax_migrate_media()' ) ) ) {
+						return $migrate_media_response;
+					}
+
+
+					$migrate_bar->tick( $file_chunk_size );
+				} // END recursive media migration
+
+				// force migrate bar to show completion
+				$migrate_bar->setMessage( sprintf( $this->get_string( 'migrate_media_files_cli_' . $intent ), $total_files, $total_files ) );
+				$migrate_bar->finish();
+			}
 
 		} // END recursive media determine
 

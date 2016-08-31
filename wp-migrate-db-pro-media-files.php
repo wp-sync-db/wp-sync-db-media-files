@@ -4,7 +4,7 @@ Plugin Name: WP Migrate DB Pro Media Files
 Plugin URI: http://deliciousbrains.com/wp-migrate-db-pro/
 Description: An extension to WP Migrate DB Pro, allows the migration of media files.
 Author: Delicious Brains
-Version: 1.3.1
+Version: 1.3.3
 Author URI: http://deliciousbrains.com
 Network: True
 */
@@ -30,10 +30,11 @@ function wp_migrate_db_pro_media_files_init() {
 
 	load_plugin_textdomain( 'wp-migrate-db-pro-media-files', false, dirname( plugin_basename( __FILE__ ) ) . '/languages/' );
 }
+
 add_action( 'admin_init', 'wp_migrate_db_pro_media_files_init', 20 );
 
 /**
- * Populate the $wpmdbpro_media_files global with an instance of the WPMDBPro_Media_Filesclass and return it.
+ * Populate the $wpmdbpro_media_files global with an instance of the WPMDBPro_Media_Files class and return it.
  *
  * @param bool $cli Running in WP-CLI environment.
  *
@@ -42,12 +43,12 @@ add_action( 'admin_init', 'wp_migrate_db_pro_media_files_init', 20 );
 function wp_migrate_db_pro_media_files( $cli = false ) {
 	global $wpmdbpro_media_files;
 
-	if ( ! is_null( $wpmdbpro_media_files ) ) {
-		return $wpmdbpro_media_files;
-	}
-
 	// Allows hooks to bypass the regular admin / ajax checks to force load the Media Files addon (required for the CLI addon)
 	$force_load = apply_filters( 'wp_migrate_db_pro_media_files_force_load', false );
+
+	if ( false === $force_load && ! is_null( $wpmdbpro_media_files ) ) {
+		return $wpmdbpro_media_files;
+	}
 
 	if ( false === $force_load && ( ! function_exists( 'wp_migrate_db_pro_loaded' ) || ! wp_migrate_db_pro_loaded() ) ) {
 		return false;
@@ -57,6 +58,7 @@ function wp_migrate_db_pro_media_files( $cli = false ) {
 
 	if ( $cli ) {
 		require_once dirname( __FILE__ ) . '/class/wpmdbpro-media-files-cli.php';
+		require_once dirname( __FILE__ ) . '/class/wpmdbpro-media-files-cli-bar.php';
 
 		$wpmdbpro_media_files = new WPMDBPro_Media_Files_CLI( __FILE__ );
 	} else {
@@ -80,4 +82,5 @@ function wp_migrate_db_pro_media_files_before_cli_load() {
 
 	wp_migrate_db_pro_media_files( true );
 }
+
 add_action( 'wp_migrate_db_pro_cli_before_load', 'wp_migrate_db_pro_media_files_before_cli_load' );
