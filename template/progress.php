@@ -1,4 +1,4 @@
-<div class="media-progress">
+<div class="progress-wrapper-secondary media-progress">
 	<div class="progress-info-wrapper clearfix">
 		<div class="media progress-text"><?php _e( 'Establishing Connection', 'wp-migrate-db-pro-media-files' ); ?></div>
 	</div>
