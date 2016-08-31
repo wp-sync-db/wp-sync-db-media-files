@@ -8,16 +8,61 @@ wpmdb.mediaFiles = {
 	var $mf_select_subsites_section = $( '#mf-select-subsites-section' );
 	var $mf_select_subsites = $( '#mf-select-subsites' );
 
+	// TODO: move polyfills and/or decide if they're necessary
 	// .length doesn't work on JS "associative arrays" i.e. objects with key/value elements, this does
-	Object.size = function( obj ) {
-		var size = 0, key;
-		for ( key in obj ) {
-			if ( obj.hasOwnProperty( key ) ) {
-				size++;
+	if ( ! Object.size ) {
+		Object.size = function( obj ) {
+			var size = 0, key;
+			for ( key in obj ) {
+				if ( obj.hasOwnProperty( key ) ) {
+					size++;
+				}
 			}
-		}
-		return size;
-	};
+			return size;
+		};
+	}
+
+	// From https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/keys
+	if ( ! Object.keys ) {
+		Object.keys = ( function() {
+			'use strict';
+			var hasOwnProperty = Object.prototype.hasOwnProperty,
+				hasDontEnumBug = ! ( { toString: null } ).propertyIsEnumerable( 'toString' ),
+				dontEnums = [
+					'toString',
+					'toLocaleString',
+					'valueOf',
+					'hasOwnProperty',
+					'isPrototypeOf',
+					'propertyIsEnumerable',
+					'constructor'
+				],
+				dontEnumsLength = dontEnums.length;
+
+			return function( obj ) {
+				if ( 'object' !== typeof obj && ( 'function' !== typeof obj || null === obj ) ) {
+					throw new TypeError( 'Object.keys called on non-object' );
+				}
+
+				var result = [], prop, i;
+
+				for ( prop in obj ) {
+					if ( hasOwnProperty.call( obj, prop ) ) {
+						result.push( prop );
+					}
+				}
+
+				if ( hasDontEnumBug ) {
+					for ( i = 0; i < dontEnumsLength; i++ ) {
+						if ( hasOwnProperty.call( obj, dontEnums[ i ] ) ) {
+							result.push( dontEnums[ i ] );
+						}
+					}
+				}
+				return result;
+			};
+		}() );
+	}
 
 	var disable_media_files_option = function() {
 		$( '#media-files' ).attr( 'data-available', '0' );
@@ -89,14 +134,12 @@ wpmdb.mediaFiles = {
 		wpmdb.mediaFiles.connection_info = $.trim( $( '.pull-push-connection-info' ).val() ).split( '\n' );
 		var media_type = $( 'input[name="media_migration_option"]:checked' ).val();
 
-		$( '.progress-tables' ).empty();
-		$( '.progress-tables-hover-boxes' ).empty();
-		$( '.progress-bar' ).width( '0px' );
+		wpmdb.current_migration.model.setActiveStage( 'media' );
 
 		// this only needs to be run if we are skipping the comparison
 		if ( 'entire' === media_type ) {
 			var title = 'removing_all_files_' + wpmdb_migration_type();
-			$( '.progress-text', '.progress-wrapper-primary' ).html( wpmdbmf_strings[ title ] );
+			wpmdb.current_migration.setText( wpmdbmf_strings[ title ] );
 
 			// start recursive batch delete of local files
 			var args = {};
@@ -141,13 +184,11 @@ wpmdb.mediaFiles = {
 				action: 'wpmdbmf_remove_files_recursive',
 				migration_state_id: wpmdb.migration_state_id,
 				compare: args.compare,
-				offset: args.offset,
+				offset: JSON.stringify( args.offset ),
 				nonce: wpmdb_data.nonces.remove_files_recursive
 			},
 			error: function( jqXHR, textStatus, errorThrown ) {
-				$( '.progress-title' ).html( wpmdbmf_strings.migration_failed );
-				$( '.progress-text' ).html( wpmdbGetAjaxErrors( wpmdbmf_strings.error_determining, '(#101mf)', jqXHR.responseText, jqXHR ) );
-				$( '.progress-text' ).addClass( 'migration-error' );
+				wpmdb.current_migration.setState( wpmdbmf_strings.migration_failed, wpmdbGetAjaxErrors( wpmdbmf_strings.error_determining, '(#101mf)', jqXHR.responseText, jqXHR ), 'error' );
 				console.log( jqXHR );
 				console.log( textStatus );
 				console.log( errorThrown );
@@ -192,9 +233,7 @@ wpmdb.mediaFiles = {
 		var copy_entire_media = 0;
 		var media_type = $( 'input[name="media_migration_option"]:checked' ).val();
 
-		$( '.progress-tables' ).empty();
-		$( '.progress-tables' ).html( '<div title="' + wpmdbmf_strings.media_files + '" style="width: 100%;" class="progress-chunk media_files"><span></div>' );
-		$( '.progress-text', '.progress-wrapper-primary' ).html( '0% - ' + wpmdbmf_strings.determining );
+		wpmdb.current_migration.setText( '0% - ' + wpmdbmf_strings.determining );
 
 		if ( 'compare-remove' === media_type ) {
 			media_type = 'compare';
@@ -217,9 +256,7 @@ wpmdb.mediaFiles = {
 				nonce: wpmdb_data.nonces.prepare_determine_media
 			},
 			error: function( jqXHR, textStatus, errorThrown ) {
-				$( '.progress-title' ).html( wpmdbmf_strings.migration_failed );
-				$( '.progress-text' ).html( wpmdbGetAjaxErrors( wpmdbmf_strings.error_determining, '(#101mf)', jqXHR.responseText, jqXHR ) );
-				$( '.progress-text' ).addClass( 'migration-error' );
+				wpmdb.current_migration.setState( wpmdbmf_strings.migration_failed, wpmdbGetAjaxErrors( wpmdbmf_strings.error_determining, '(#101mf)', jqXHR.responseText, jqXHR ), 'error' );
 				console.log( jqXHR );
 				console.log( textStatus );
 				console.log( errorThrown );
@@ -246,8 +283,6 @@ wpmdb.mediaFiles = {
 				args.remove_local_media = remove_local_media;
 				args.copy_entire_media = copy_entire_media;
 
-				$( '.progress-tables' ).html( '<div title="' + wpmdbmf_strings.media_attachments + '" style="width: 100%;" class="progress-chunk media_files"><span>' + wpmdbmf_strings.media_attachments + ' (<span class="">0</span> / ' + wpmdb_add_commas( args.attachment_count ) + ')</span></div>' );
-
 				wpmdb.common.next_step_in_migration = {
 					fn: wpmdb.functions.determine_media_to_migrate_recursive,
 					args: [ args ]
@@ -258,13 +293,10 @@ wpmdb.mediaFiles = {
 	};
 
 	wpmdb.functions.determine_media_to_migrate_recursive = function( args ) {
-		if ( args.determine_progress === args.attachment_count ) {
-			$( '.progress-wrapper-secondary' ).hide();
-			$( '.progress-bar' ).width( '0px' );
-			$( '.progress-tables' ).empty();
+		if ( args.determine_progress >= args.attachment_count ) {
 
-			// finalise migration
-			wpmdb.common.next_step_in_migration = { fn: wpmdb.functions.finalise_media_migration, args: [ args ] };
+			// migrate files
+			wpmdb.common.next_step_in_migration = { fn: wpmdb.functions.media_successfully_determined, args: [ args ] };
 			wpmdb.functions.execute_next_step();
 			return;
 		}
@@ -288,9 +320,7 @@ wpmdb.mediaFiles = {
 				nonce: wpmdb_data.nonces.determine_media_to_migrate_recursive
 			},
 			error: function( jqXHR, textStatus, errorThrown ) {
-				$( '.progress-title' ).html( wpmdbmf_strings.migration_failed );
-				$( '.progress-text', '.progress-wrapper-primary' ).html( wpmdbmf_strings.error_determining + ' (#101mf)' );
-				$( '.progress-text', '.progress-wrapper-primary' ).addClass( 'migration-error' );
+				wpmdb.current_migration.setState( wpmdbmf_strings.migration_failed, wpmdbmf_strings.error_determining + ' (#101mf)', 'error' );
 				console.log( jqXHR );
 				console.log( textStatus );
 				console.log( errorThrown );
@@ -313,17 +343,24 @@ wpmdb.mediaFiles = {
 
 				args.blogs = data.blogs;
 				args.determine_progress = data.determine_progress;
-				args.total_size = data.total_size;
-				args.files_to_migrate = data.files_to_migrate;
+				args.total_size = args.total_size || 0;
+				args.total_size += data.total_size;
+				args.files_to_migrate = args.files_to_migrate || {};
 
-				var percent = 100 * args.determine_progress / args.attachment_count;
+				_.each( data.files_to_migrate, function( data, filepath ) {
+					args.files_to_migrate[ filepath ] = data;
+					wpmdb.current_migration.model.addStageItem( 'media', filepath, parseInt( data / 1024 ) );
+				} );
+
+				var percent =  Math.min( 100, 100 * args.determine_progress / args.attachment_count );
 				var overall_percent = Math.floor( percent );
-				$( '.progress-bar', '.progress-wrapper-primary' ).width( percent + '%' );
-				$( '.progress-text', '.progress-wrapper-primary' ).html( overall_percent + '% - ' + wpmdbmf_strings.determining );
-				$( '.progress-tables', '.progress-wrapper-primary' ).html( '<div title="' + wpmdbmf_strings.media_attachments + '" style="width: 100%;" class="progress-chunk media_files"><span>' + wpmdbmf_strings.media_attachments + ' (<span class="">' + wpmdb_add_commas( args.determine_progress ) + '</span> / ' + wpmdb_add_commas( args.attachment_count ) + ')</span></div>' );
+
+				// Not "real" progress as far as model is concerned, so we force the progress bar to show media determine progress by accessing it directly
+				$( '.progress-bar', '.migration-progress-stage-container[data-stage=media] .stage-progress' ).width( percent + '%' );
+				wpmdb.current_migration.setText( overall_percent + '% - ' + wpmdbmf_strings.determining );
 
 				wpmdb.common.next_step_in_migration = {
-					fn: wpmdb.functions.media_successfully_determined,
+					fn: wpmdb.functions.determine_media_to_migrate_recursive,
 					args: [ args ]
 				};
 				wpmdb.functions.execute_next_step();
@@ -343,10 +380,10 @@ wpmdb.mediaFiles = {
 		args.media_progress = 0;
 		args.media_progress_image_number = 0;
 		args.bottleneck = wpmdb_data.max_request;
-		args.total_files = Object.size( args.files_to_migrate );
+		args.files_to_migrate = args.files_to_migrate || {};
 
-		$( '.progress-wrapper-secondary' ).show();
-		set_media_progress( 0, 0, args.total_files );
+		var title = 'migrate_media_files_' + wpmdb_migration_type();
+		wpmdb.current_migration.setText( wpmdbmf_strings[ title ] );
 
 		wpmdb.common.next_step_in_migration = { fn: migrate_media_files_recursive, args: [ args ] };
 		wpmdb.functions.execute_next_step();
@@ -354,17 +391,12 @@ wpmdb.mediaFiles = {
 
 	function migrate_media_files_recursive( args ) {
 		if ( 0 === Object.size( args.files_to_migrate ) ) {
-			if ( 0 === args.total_size ) {
-				set_media_progress( 0, 0, 0 );
-			} else {
-				current_media_progress( args );
-			}
 
 			delete args.files_to_migrate;
 			delete args.total_size;
 
 			wpmdb.common.next_step_in_migration = {
-				fn: wpmdb.functions.determine_media_to_migrate_recursive,
+				fn: wpmdb.functions.finalise_media_migration,
 				args: [ args ]
 			};
 			wpmdb.functions.execute_next_step();
@@ -404,7 +436,6 @@ wpmdb.mediaFiles = {
 
 		// If nothing made it into this batch let the top of the function determine whether to do another or move on a step.
 		if ( !file_chunk_to_migrate.length ) {
-			current_media_progress( args );
 
 			wpmdb.common.next_step_in_migration = { fn: migrate_media_files_recursive, args: [ args ] };
 			wpmdb.functions.execute_next_step();
@@ -423,9 +454,7 @@ wpmdb.mediaFiles = {
 				nonce: wpmdb_data.nonces.migrate_media
 			},
 			error: function( jqXHR, textStatus, errorThrown ) {
-				$( '.progress-title' ).html( wpmdbmf_strings.migration_failed );
-				$( '.progress-text', '.progress-wrapper-primary' ).html( wpmdbGetAjaxErrors( wpmdbmf_strings.problem_migrating_media, '(#102mf)', jqXHR.responseText, jqXHR ) );
-				$( '.progress-text', '.progress-wrapper-primary' ).addClass( 'migration-error' );
+				wpmdb.current_migration.setState( wpmdbmf_strings.migration_failed, wpmdbGetAjaxErrors( wpmdbmf_strings.migration_failed, '(#102mf)', jqXHR.responseText, jqXHR ), 'error' );
 				console.log( jqXHR );
 				console.log( textStatus );
 				console.log( errorThrown );
@@ -450,9 +479,19 @@ wpmdb.mediaFiles = {
 					wpmdb.common.non_fatal_errors += data.body;
 				}
 
-				args.media_progress += file_chunk_size;
+				if ( data.transfers && data.transfers.length ) {
+					var timeout = 0;
+					$.each( data.transfers, function( i, transfer ) {
 
-				current_media_progress( args );
+						// timeout used to stagger display of progress bars filling
+						setTimeout( function() {
+							wpmdb.current_migration.model.getStageModel( 'media' ).setItemComplete( transfer.file );
+						}, timeout );
+						timeout += 50;
+					} );
+				}
+
+				args.media_progress += file_chunk_size;
 
 				wpmdb.common.next_step_in_migration = { fn: migrate_media_files_recursive, args: [ args ] };
 				wpmdb.functions.execute_next_step();
@@ -468,7 +507,7 @@ wpmdb.mediaFiles = {
 
 			// Start recursive batch delete of local files not found on remote
 			var title = 'removing_files_' + wpmdb_migration_type();
-			$( '.progress-text', '.progress-wrapper-primary' ).html( wpmdbmf_strings[ title ] );
+			wpmdb.current_migration.setText( wpmdbmf_strings[ title ] );
 
 			args = {};
 			args.remove_files = 1;
@@ -484,34 +523,9 @@ wpmdb.mediaFiles = {
 	};
 
 	function migration_failed( data ) {
-		$( '.progress-title' ).html( wpmdbmf_strings.migration_failed );
-		$( '.progress-text', '.progress-wrapper-primary' ).html( wpmdbGetAjaxErrors( '', '', data ) );
-		$( '.progress-text', '.progress-wrapper-primary' ).addClass( 'migration-error' );
-		$( '.progress-wrapper-secondary' ).fadeOut();
+		wpmdb.current_migration.setState( wpmdbmf_strings.migration_failed, wpmdbGetAjaxErrors( '', '', data ), 'error' );
 		wpmdb.common.migration_error = true;
 		wpmdb.functions.migration_complete_events();
-	}
-
-	function current_media_progress( args ) {
-		var percent = 100 * args.media_progress / args.total_size;
-		var files_migrated = ( percent / 100 ) * args.total_files;
-		set_media_progress( percent, Math.round( files_migrated ), args.total_files );
-	}
-
-	function set_media_progress( percent, progress, total ) {
-		var overall_percent = Math.floor( percent );
-		var title = 'migrate_media_files_' + wpmdb_migration_type();
-		$( '.progress-text', '.progress-wrapper-secondary' ).html( overall_percent + '% - ' + wpmdbmf_strings[ title ] );
-		var unit = '%';
-		if ( 0 === percent ) {
-			unit = 'px';
-		}
-		$( '.progress-bar', '.progress-wrapper-secondary' ).width( percent + unit );
-		var text = '';
-		if ( 0 <= total ) {
-			text += '<span>' + wpmdbmf_strings.media_files + ' (<span class="">' + wpmdb_add_commas( progress ) + '</span> / ' + wpmdb_add_commas( total ) + ')</span>';
-		}
-		$( '.progress-tables', '.progress-wrapper-secondary' ).html( '<div title="" style="width: 100%;" class="progress-chunk media_files">' + text + '</div>' );
 	}
 
 	function is_media_migration() {
@@ -565,12 +579,12 @@ wpmdb.mediaFiles = {
 		var selected_tables = $.wpmdb.apply_filters( 'wpmdb_get_tables_to_migrate', null, null );
 
 		if ( 'true' === wpmdb_data.is_multisite &&
-			$mf_select_subsites.is( ':checked' ) &&
-			undefined !== selected_subsites &&
-			null !== selected_subsites &&
-			undefined !== selected_tables &&
-			null !== selected_tables &&
-			0 < selected_tables.length ) {
+		     $mf_select_subsites.is( ':checked' ) &&
+		     undefined !== selected_subsites &&
+		     null !== selected_subsites &&
+		     undefined !== selected_tables &&
+		     null !== selected_tables &&
+		     0 < selected_tables.length ) {
 			var table_prefix = $.wpmdb.apply_filters( 'wpmdb_get_table_prefix', null, null );
 			var files_differ = false;
 
@@ -591,6 +605,16 @@ wpmdb.mediaFiles = {
 			}
 		} else {
 			$notice.hide();
+		}
+	}
+
+	function maybe_add_mf_progress_stage( args ) {
+		if ( true === is_media_migration() && 'savefile' !== wpmdb_migration_type() ) {
+			wpmdb.current_migration.model.addStage( 'media', [], args.dataType, {
+				strings: {
+					itemsName: wpmdb_strings.files
+				}
+			} );
 		}
 	}
 
@@ -634,6 +658,8 @@ wpmdb.mediaFiles = {
 		$.wpmdb.add_filter( 'wpmdb_migration_profile_ready', filter_migration_profile_ready );
 		$.wpmdb.add_action( 'wpmdb_tables_to_migrate_changed', maybe_show_data_and_files_differ_notice );
 		$.wpmdb.add_action( 'wpmdbmf_selected_subsites_changed', maybe_show_data_and_files_differ_notice );
+
+		$.wpmdb.add_action( 'wpmdb_add_migration_stages', maybe_add_mf_progress_stage );
 
 		$( 'input[name="media_migration_option"]' ).change( function() {
 			compare_remove_warning_toggle();

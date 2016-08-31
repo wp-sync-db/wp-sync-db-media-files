@@ -214,15 +214,18 @@ class WPMDBPro_Media_Files_Local extends WPMDBPro_Media_Files_Base {
 
 		$upload_dir = $this->uploads_dir();
 
-		$errors = array();
+		$errors    = array();
+		$transfers = array();
 		foreach ( $files_to_download as $file_to_download ) {
-			$remote_url     = $remote_uploads_url . apply_filters( 'wpmdbmf_file_to_download', $file_to_download, 'pull', $this );
-			$temp_file_path = $this->download_url( $remote_url );
+			$current_transfer = array( 'file' => $file_to_download, 'error' => false );
+			$remote_url       = $remote_uploads_url . apply_filters( 'wpmdbmf_file_to_download', $file_to_download, 'pull', $this );
+			$temp_file_path   = $this->download_url( $remote_url );
 
 			if ( is_wp_error( $temp_file_path ) ) {
-				$download_error = $temp_file_path->get_error_message();
-				$errors[]       = sprintf( __( 'Could not download file: %1$s - %2$s', 'wp-migrate-db-pro-media-files' ), $remote_url, $download_error );
-
+				$download_error            = $temp_file_path->get_error_message();
+				$current_transfer['error'] = $download_error;
+				$errors[]                  = sprintf( __( 'Could not download file: %1$s - %2$s', 'wp-migrate-db-pro-media-files' ), $remote_url, $download_error );
+				$transfers[]               = $current_transfer;
 				continue;
 			}
 
@@ -232,16 +235,23 @@ class WPMDBPro_Media_Files_Local extends WPMDBPro_Media_Files_Base {
 
 			// WPMDB_Filesystem::mkdir will return true straight away if the dir exists
 			if ( false === $this->filesystem->mkdir( $folder ) ) {
-				$errors[] = sprintf( __( 'Error attempting to create required directory: %s', 'wp-migrate-db-pro-media-files' ), $folder ) . ' (#104mf)';
+				$error_string              = sprintf( __( 'Error attempting to create required directory: %s', 'wp-migrate-db-pro-media-files' ), $folder ) . ' (#104mf)';
+				$errors[]                  = $error_string;
+				$current_transfer['error'] = $error_string;
+
 			} elseif ( false === $this->filesystem->move( $temp_file_path, $new_path ) ) {
-				$errors[] = sprintf( __( 'Error attempting to move downloaded file. Temp path: %1$s - New Path: %2$s', 'wp-migrate-db-pro-media-files' ), $temp_file_path, $new_path ) . ' (#105mf)';
+				$error_string              = sprintf( __( 'Error attempting to move downloaded file. Temp path: %1$s - New Path: %2$s', 'wp-migrate-db-pro-media-files' ), $temp_file_path, $new_path ) . ' (#105mf)';
+				$errors[]                  = $error_string;
+				$current_transfer['error'] = $error_string;
 			}
+
+			$transfers[] = $current_transfer;
 
 			// set default permissions on moved file
 			$this->filesystem->chmod( $new_path );
 		}
 
-		$return = array( 'success' => 1 );
+		$return = array( 'success' => 1, 'transfers' => $transfers );
 
 		if ( ! empty( $errors ) ) {
 			$return['wpmdb_non_fatal_error'] = 1;
@@ -359,6 +369,8 @@ class WPMDBPro_Media_Files_Local extends WPMDBPro_Media_Files_Base {
 
 		$this->set_post_data( $key_rules );
 
+		$this->state_data['offset'] = (array) json_decode( $this->state_data['offset'] );
+
 		if ( 'pull' == $this->state_data['intent'] ) {
 			// send batch of files to be compared on the remote
 			// receive batch of files to be deleted
@@ -388,12 +400,11 @@ class WPMDBPro_Media_Files_Local extends WPMDBPro_Media_Files_Base {
 	 * @param string $remote_url          The remote site URL
 	 * @param string $remote_key          The remote site key
 	 * @param int    $compare_with_remote 1 = Will compare files existence on remote, 0 = no comparison
-	 * @param string $offset              Last file in previous batch to start this batch from
+	 * @param array  $offset              Offset (blog id, post id) of last file in batch
 	 *
 	 * @return array
 	 */
-	function remove_local_files_recursive( $remote_url, $remote_key, $compare_with_remote, $offset = '0' ) {
-
+	function remove_local_files_recursive( $remote_url, $remote_key, $compare_with_remote, $offset = null ) {
 		if ( 1 === ( int ) $compare_with_remote ) {
 			$local_media_files = $this->get_local_media_attachment_files_batch( $offset );
 
@@ -418,9 +429,9 @@ class WPMDBPro_Media_Files_Local extends WPMDBPro_Media_Files_Base {
 			// files that don't exist returned as new batch to delete
 			$files_to_remove = isset( $response['files_to_remove'] ) ? $response['files_to_remove'] : array();
 
-			$return_offset = $local_media_files['last_attachment_id'];
+			$return_offset = array( $local_media_files['last_blog_id'], $local_media_files['last_attachment_id'] );
 		} else {
-			$local_media_files = $this->get_local_media_files_batch( $offset );
+			$local_media_files = $this->get_local_media_files_batch( array_pop( $offset ) );
 
 			if ( ! $local_media_files ) {
 				return array( 'offset' => '', 'remove_files' => 0 );
@@ -461,21 +472,22 @@ class WPMDBPro_Media_Files_Local extends WPMDBPro_Media_Files_Base {
 	 * @param string $remote_url          The remote site URL
 	 * @param string $remote_key          The remote site key
 	 * @param int    $compare_with_remote 1 = Will compare files existence on remote, 0 = no comparison
-	 * @param string $offset              Last file in previous batch to start this batch from
+	 * @param array  $offset              Offset (blog_id, post_id) of last file in previous batch to start this batch from
 	 *
 	 * @return array
 	 */
-	function remove_remote_files_recursive( $remote_url, $remote_key, $compare_with_remote, $offset = '0' ) {
+	function remove_remote_files_recursive( $remote_url, $remote_key, $compare_with_remote, $offset = null ) {
 		// request a batch from the remote
 		$data                    = array();
 		$data['action']          = 'wpmdbmf_get_local_media_files_batch';
 		$data['remote_state_id'] = $this->state_data['remote_state_id'];
 		$data['compare']         = $compare_with_remote;
-		$data['offset']          = $offset;
+		$data['offset']          = json_encode( $offset );
 		$data['sig']             = $this->create_signature( $data, $remote_key );
 		$ajax_url                = trailingslashit( $remote_url ) . 'wp-admin/admin-ajax.php';
 		$response                = $this->remote_post( $ajax_url, $data, __FUNCTION__ );
 		$response                = $this->verify_remote_post_response( $response );
+
 		if ( isset( $response['wpmdb_error'] ) ) {
 			return $response;
 		}
@@ -489,7 +501,7 @@ class WPMDBPro_Media_Files_Local extends WPMDBPro_Media_Files_Base {
 
 			// compare received batch of files with local filesystem
 			$files_to_remove = $this->get_files_not_on_local( $remote_media_files['files'], 'push' );
-			$return_offset   = $remote_media_files['last_attachment_id'];
+			$return_offset   = array( $remote_media_files['last_blog_id'], $remote_media_files['last_attachment_id'] );
 		} else {
 			$remote_media_files = $response['local_media_files'];
 

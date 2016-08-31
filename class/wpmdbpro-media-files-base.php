@@ -36,7 +36,7 @@ class WPMDBPro_Media_Files_Base extends WPMDBPro_Addon {
 		parent::__construct( $plugin_file_path );
 
 		$this->media_diff_batch_time        = apply_filters( 'wpmdb_media_diff_batch_time', 10 );
-		$this->media_diff_batch_limit       = apply_filters( 'wpmdb_media_diff_batch_limit', 500 );
+		$this->media_diff_batch_limit       = apply_filters( 'wpmdb_media_diff_batch_limit', 300 );
 		$this->media_files_batch_time_limit = apply_filters( 'wpmdb_media_files_batch_time_limit', 15 );
 
 		$this->accepted_fields = array(
@@ -103,7 +103,7 @@ class WPMDBPro_Media_Files_Base extends WPMDBPro_Addon {
 	 * @param string $prefix Blog db prefix
 	 * @param int    $blog   Blog ID
 	 * @param int    $limit  Limit passed to SQL query (for batching)
-	 * @param int    $offset Offset (post ID) passed to SQL query (for batching)
+	 * @param array  $offset Offset (blog ID, post ID) passed to SQL query (for batching)
 	 *
 	 * @return array Attachments
 	 */
@@ -162,7 +162,7 @@ class WPMDBPro_Media_Files_Base extends WPMDBPro_Addon {
 	 *
 	 * @param mixed $blogs  Blogs
 	 * @param int   $limit  Max attachments limit (for batching)
-	 * @param int   $offset Optional offset to use instead of $blog['last_post']
+	 * @param array $offset Optional offset (blog ID, post ID) to use instead of $blog['last_post']
 	 *
 	 * @return array Local attachments and blogs
 	 */
@@ -181,13 +181,19 @@ class WPMDBPro_Media_Files_Base extends WPMDBPro_Addon {
 				continue;
 			}
 
-			if ( is_null( $offset ) ) {
-				$offset = $blog['last_post'];
+			$blog_offset = $blog['last_post'];
+			if ( is_array( $offset ) ) {
+				if ( $offset[0] > $blog_id ) {
+					$blogs[ $blog_id ]['processed'] = 1;
+					continue;
+				} elseif ( $blog_id == $offset[0] ) {
+					$blog_offset = $offset[1];
+				}
 			}
 
-			$attachments = $this->get_attachments( $blog['prefix'], $blog_id, $limit, $offset );
-			$count       = count( $attachments );
 
+			$attachments = $this->get_attachments( $blog['prefix'], $blog_id, $limit, $blog_offset );
+			$count       = count( $attachments );
 			if ( 0 == $count ) {
 				// no more attachments, record the blog ID to skip next time
 				$blogs[ $blog_id ]['processed'] = 1;
@@ -218,7 +224,7 @@ class WPMDBPro_Media_Files_Base extends WPMDBPro_Addon {
 	/**
 	 * Return all attachment files across all blogs
 	 *
-	 * @param int $offset Attachment ID offset
+	 * @param array $offset (blog ID, attachment ID) offset
 	 *
 	 * @return array Local media attachment files and last attachment ID
 	 */
@@ -227,13 +233,15 @@ class WPMDBPro_Media_Files_Base extends WPMDBPro_Addon {
 		$last_attachment_id           = 0;
 
 		$blogs                   = $this->get_blogs();
-		$local_media_attachments = $this->get_local_attachments_batch( $blogs, $this->media_diff_batch_limit, ( int ) $offset );
+		$local_media_attachments = $this->get_local_attachments_batch( $blogs, $this->media_diff_batch_limit, $offset );
+		$last_blog_id            = 1;
 
 		// Get file paths from attachments
 		foreach ( $local_media_attachments['attachments'] as $blog_id => $attachments ) {
 			foreach ( $attachments as $attachment ) {
 				if ( ! empty( $attachment['file_size'] ) ) {
 					$local_media_attachment_files[] = $attachment['file'];
+					$last_blog_id                   = $blog_id;
 					$last_attachment_id             = $attachment['ID'];
 				}
 
@@ -249,6 +257,7 @@ class WPMDBPro_Media_Files_Base extends WPMDBPro_Addon {
 
 		return array(
 			'files'              => $local_media_attachment_files,
+			'last_blog_id'       => $last_blog_id,
 			'last_attachment_id' => $last_attachment_id,
 		);
 	}
@@ -312,8 +321,8 @@ class WPMDBPro_Media_Files_Base extends WPMDBPro_Addon {
 			$finish_time = microtime( true ) + $this->media_files_batch_time_limit;
 		}
 
-		$dir      = ( '/' == $dir ) ? '' : $dir;
-		$dir_path = $upload_dir . $dir;
+		$dir       = ( '/' == $dir ) ? '' : $dir;
+		$dir_path  = $upload_dir . $dir;
 		$sub_paths = glob( $dir_path . '*', GLOB_MARK );
 
 		// Get all the files except the one we use to store backups.

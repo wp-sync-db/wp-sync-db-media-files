@@ -230,23 +230,31 @@ class WPMDBPro_Media_Files_Remote extends WPMDBPro_Media_Files_Base {
 		$file_paths = unserialize( $filtered_post['files'] );
 		$i          = 0;
 		$errors     = array();
+		$transfers  = array();
 		foreach ( $files as &$file ) {
-			$destination = $upload_dir . apply_filters( 'wpmdbmf_destination_file_path', $file_paths[ $i ], 'push', $this );
-			$folder      = dirname( $destination );
+			$destination      = $upload_dir . apply_filters( 'wpmdbmf_destination_file_path', $file_paths[ $i ], 'push', $this );
+			$folder           = dirname( $destination );
+			$current_transfer = array( 'file' => $file_paths[ $i ], 'error' => false );
 
 			if ( false === $this->filesystem->file_exists( $folder ) && false === $this->filesystem->mkdir( $folder ) ) {
-				$errors[] = sprintf( __( 'Error attempting to create required directory: %s', 'wp-migrate-db-pro-media-files' ), $folder ) . ' (#108mf)';
+				$error_string              = sprintf( __( 'Error attempting to create required directory: %s', 'wp-migrate-db-pro-media-files' ), $folder ) . ' (#108mf)';
+				$errors[]                  = $error_string;
+				$current_transfer['error'] = $error_string;
 				++$i;
+				$transfers[] = $current_transfer;
 				continue;
 			}
 
 			if ( false === $this->filesystem->move_uploaded_file( $file['tmp_name'], $destination ) ) {
-				$errors[] = sprintf( __( 'A problem occurred when attempting to move the temp file "%1$s" to "%2$s"', 'wp-migrate-db-pro-media-files' ), $file['tmp_name'], $destination ) . ' (#107mf)';
+				$error_string              = sprintf( __( 'A problem occurred when attempting to move the temp file "%1$s" to "%2$s"', 'wp-migrate-db-pro-media-files' ), $file['tmp_name'], $destination ) . ' (#107mf)';
+				$errors[]                  = $error_string;
+				$current_transfer['error'] = $error_string;
 			}
+			$transfers[] = $current_transfer;
 			++$i;
 		}
 
-		$return = array( 'success' => 1 );
+		$return = array( 'success' => 1, 'transfers' => $transfers );
 
 		if ( ! empty( $errors ) ) {
 			$return['wpmdb_non_fatal_error'] = 1;
@@ -298,14 +306,14 @@ class WPMDBPro_Media_Files_Remote extends WPMDBPro_Media_Files_Base {
 			return $result;
 		}
 
-		$offset = isset( $filtered_post['offset'] ) ? $filtered_post['offset'] : '0';
+		$offset = isset( $filtered_post['offset'] ) ? json_decode( $filtered_post['offset'] ) : '0';
 
 		$local_media_files            = array();
 		$local_media_attachment_files = array();
 		if ( 1 === (int) $filtered_post['compare'] ) {
 			$local_media_attachment_files = $this->get_local_media_attachment_files_batch( $offset );
 		} else {
-			$local_media_files = $this->get_local_media_files_batch( $offset );
+			$local_media_files = $this->get_local_media_files_batch( array_pop( $offset ) );
 		}
 
 		$return = array(

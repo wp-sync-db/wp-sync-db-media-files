@@ -63,7 +63,7 @@ class WPMDBPro_Media_Files_CLI extends WPMDBPro_Media_Files {
 			$remove_files = 1;
 			while ( 1 == $remove_files ) {
 				$_POST['compare'] = $compare;
-				$_POST['offset']  = $offset;
+				$_POST['offset']  = json_encode( $offset );
 
 				$response = $this->media_files_local->ajax_remove_files_recursive();
 				if ( is_wp_error( $remove_files_recursive_response = $wpmdbpro_cli->verify_cli_response( $response, 'ajax_remove_files_recursive()' ) ) ) {
@@ -176,7 +176,7 @@ class WPMDBPro_Media_Files_CLI extends WPMDBPro_Media_Files {
 			$remove_files = 1;
 			while ( 1 == $remove_files ) {
 				$_POST['compare'] = $compare;
-				$_POST['offset']  = $offset;
+				$_POST['offset']  = json_encode( $offset );
 
 				$response = $this->media_files_local->ajax_remove_files_recursive();
 				if ( is_wp_error( $remove_files_recursive_response = $wpmdbpro_cli->verify_cli_response( $response, 'ajax_remove_files_recursive()' ) ) ) {

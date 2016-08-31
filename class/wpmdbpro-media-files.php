@@ -34,14 +34,13 @@ class WPMDBPro_Media_Files extends WPMDBPro_Addon {
 		$this->plugin_slug    = 'wp-migrate-db-pro-media-files';
 		$this->plugin_version = $GLOBALS['wpmdb_meta']['wp-migrate-db-pro-media-files']['version'];
 
-		if ( ! $this->meets_version_requirements( '1.5.5' ) ) {
+		if ( ! $this->meets_version_requirements( '1.6' ) ) {
 			return;
 		}
 
 		add_action( 'wpmdb_after_advanced_options', array( $this, 'migration_form_controls' ) );
 		add_action( 'wpmdb_load_assets', array( $this, 'load_assets' ) );
 		add_action( 'wpmdb_diagnostic_info', array( $this, 'diagnostic_info' ) );
-		add_action( 'wpmdb_template_progress_after_bar', array( $this, 'progress_template' ) );
 		add_action( 'wpmdbmf_after_migration_options', array( $this, 'after_migration_options_template' ) );
 		add_filter( 'wpmdb_establish_remote_connection_data', array( $this, 'establish_remote_connection_data' ) );
 		add_filter( 'wpmdb_nonces', array( $this, 'add_nonces' ) );
@@ -114,10 +113,10 @@ class WPMDBPro_Media_Files extends WPMDBPro_Addon {
 		$version     = defined( 'SCRIPT_DEBUG' ) && SCRIPT_DEBUG ? time() : $this->plugin_version;
 		$min         = defined( 'SCRIPT_DEBUG' ) && SCRIPT_DEBUG ? '' : '.min';
 
-		$src = $plugins_url . 'asset/css/styles.css';
+		$src = $plugins_url . 'asset/dist/css/styles.css';
 		wp_enqueue_style( 'wp-migrate-db-pro-media-files-styles', $src, array( 'wp-migrate-db-pro-styles' ), $version );
 
-		$src = $plugins_url . "asset/js/script$min.js";
+		$src = $plugins_url . "asset/dist/js/script$min.js";
 		wp_enqueue_script( 'wp-migrate-db-pro-media-files-script', $src, array(
 			'jquery',
 			'wp-migrate-db-pro-common',
@@ -196,13 +195,6 @@ class WPMDBPro_Media_Files extends WPMDBPro_Addon {
 		$nonces['determine_media_to_migrate_recursive'] = wp_create_nonce( 'determine-media-to-migrate-recursive' );
 
 		return $nonces;
-	}
-
-	/**
-	 * Extend the progress modal core template with our second progress bar
-	 */
-	function progress_template() {
-		$this->template( 'progress' );
 	}
 
 	/**
