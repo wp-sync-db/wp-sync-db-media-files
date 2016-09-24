@@ -1,6 +1,6 @@
 <?php
 class WPSDB_Media_Files extends WPSDB_Addon {
-	protected $files_to_migrate;
+	protected $files_to_sync;
 	protected $responding_to_get_remote_media_listing = false;
 
 	function __construct( $plugin_file_path ) {
@@ -11,19 +11,19 @@ class WPSDB_Media_Files extends WPSDB_Addon {
 
 		if( ! $this->meets_version_requirements( '1.4b1' ) ) return;
 
-		add_action( 'wpsdb_after_advanced_options', array( $this, 'migration_form_controls' ) );
+		add_action( 'wpsdb_after_advanced_options', array( $this, 'syncing_form_controls' ) );
 		add_action( 'wpsdb_load_assets', array( $this, 'load_assets' ) );
 		add_action( 'wpsdb_js_variables', array( $this, 'js_variables' ) );
 		add_filter( 'wpsdb_accepted_profile_fields', array( $this, 'accepted_profile_fields' ) );
 		add_filter( 'wpsdb_establish_remote_connection_data', array( $this, 'establish_remote_connection_data' ) );
 		add_filter( 'wpsdb_nonces', array( $this, 'add_nonces' ) );
 
-		// compatibility with CLI migraitons
-		add_filter( 'wpsdb_cli_finalize_migration', array( $this, 'cli_migration' ), 10, 4 );
+		// compatibility with CLI syncing
+		add_filter( 'wpsdb_cli_finalize_syncing', array( $this, 'cli_syncing' ), 10, 4 );
 
 		// internal AJAX handlers
-		add_action( 'wp_ajax_wpsdbmf_determine_media_to_migrate', array( $this, 'ajax_determine_media_to_migrate' ) );
-		add_action( 'wp_ajax_wpsdbmf_migrate_media', array( $this, 'ajax_migrate_media' ) );
+		add_action( 'wp_ajax_wpsdbmf_determine_media_to_sync', array( $this, 'ajax_determine_media_to_sync' ) );
+		add_action( 'wp_ajax_wpsdbmf_sync_media', array( $this, 'ajax_sync_media' ) );
 
 		// external AJAX handlers
 		add_action( 'wp_ajax_nopriv_wpsdbmf_get_remote_media_listing', array( $this, 'respond_to_get_remote_media_listing' ) );
@@ -37,7 +37,7 @@ class WPSDB_Media_Files extends WPSDB_Addon {
 		$temp_prefix = stripslashes( $_POST['temp_prefix'] );
 
 		/*
-		* We determine which media files need migrating BEFORE the database migration is finalized.
+		* We determine which media files need syncing BEFORE the database syncing is finalized.
 		* Because of this we need to scan the *_post & *_postmeta that are prefixed using the temporary prefix.
 		* Though this should only happen when we're responding to a get_remote_media_listing() call AND it's a push OR
 		* we're scanning local files AND it's a pull.
@@ -154,8 +154,8 @@ class WPSDB_Media_Files extends WPSDB_Addon {
 		return $local_media;
 	}
 
-	function ajax_migrate_media() {
-		$this->check_ajax_referer( 'migrate-media' );
+	function ajax_sync_media() {
+		$this->check_ajax_referer( 'sync-media' );
 		$this->set_time_limit();
 
 		if ( $_POST['intent'] == 'pull' ) {
@@ -228,18 +228,18 @@ class WPSDB_Media_Files extends WPSDB_Addon {
 	}
 
 	function process_push_request() {
-		$files_to_migrate = $_POST['file_chunk'];
+		$files_to_sync = $_POST['file_chunk'];
 
 		$upload_dir = $this->uploads_dir();
 
 		$body = '';
-		foreach( $files_to_migrate as $file_to_migrate ) {
-			$body .= $this->file_to_multipart( $upload_dir . $file_to_migrate );
+		foreach( $files_to_sync as $file_to_sync ) {
+			$body .= $this->file_to_multipart( $upload_dir . $file_to_sync );
 		}
 
 		$post_args = array(
 			'action'	=> 'wpsdbmf_push_request',
-			'files'		=> serialize( $files_to_migrate )
+			'files'		=> serialize( $files_to_sync )
 		);
 
 		$post_args['sig'] = $this->create_signature( $post_args, $_POST['key'] );
@@ -309,8 +309,8 @@ class WPSDB_Media_Files extends WPSDB_Addon {
 		return $result;
 	}
 
-	function ajax_determine_media_to_migrate() {
-		$this->check_ajax_referer( 'determine-media-to-migrate' );
+	function ajax_determine_media_to_sync() {
+		$this->check_ajax_referer( 'determine-media-to-sync' );
 		$this->set_time_limit();
 
 		$local_attachments = $this->get_local_attachments();
@@ -330,7 +330,7 @@ class WPSDB_Media_Files extends WPSDB_Addon {
 		$remote_attachments = $response['remote_attachments'];
 		$remote_media = $response['remote_media'];
 
-		$this->files_to_migrate = array();
+		$this->files_to_sync = array();
 
 		if( $_POST['intent'] == 'pull' ) {
 			$this->media_diff( $local_attachments, $remote_attachments, $local_media, $remote_media );
@@ -339,8 +339,8 @@ class WPSDB_Media_Files extends WPSDB_Addon {
 			$this->media_diff( $remote_attachments, $local_attachments, $remote_media, $local_media );
 		}
 
-		$return['files_to_migrate'] = $this->files_to_migrate;
-		$return['total_size'] = array_sum( $this->files_to_migrate );
+		$return['files_to_sync'] = $this->files_to_sync;
+		$return['total_size'] = array_sum( $this->files_to_sync );
 		$return['remote_uploads_url'] = $response['remote_uploads_url'];
 
 		// remove local/remote media if it doesn't exist on the local/remote site
@@ -422,26 +422,26 @@ class WPSDB_Media_Files extends WPSDB_Addon {
 			$local_timestamp = strtotime( $site_a_attachments[$local_attachment_key]['date'] );
 			if( $local_timestamp >= $remote_timestamp ) {
 				if( ! isset( $site_a_media[$attachment['file']] ) ) {
-					$this->add_files_to_migrate( $attachment, $site_b_media );
+					$this->add_files_to_sync( $attachment, $site_b_media );
 				}
 				else {
 					$this->maybe_add_resized_images( $attachment, $site_b_media, $site_a_media );
 				}
 			}
 			else {
-				$this->add_files_to_migrate( $attachment, $site_b_media );
+				$this->add_files_to_sync( $attachment, $site_b_media );
 			}
 		}
 	}
 
-	function add_files_to_migrate( $attachment, $remote_media ) {
+	function add_files_to_sync( $attachment, $remote_media ) {
 		if( isset( $remote_media[$attachment['file']] ) ) {
-			$this->files_to_migrate[$attachment['file']] = $remote_media[$attachment['file']];
+			$this->files_to_sync[$attachment['file']] = $remote_media[$attachment['file']];
 		}
 		if( empty( $attachment['sizes'] ) || apply_filters( 'wpsdb_exclude_resized_media', false ) ) return;
 		foreach( $attachment['sizes'] as $size ) {
 			if( isset( $remote_media[$size] ) ) {
-				$this->files_to_migrate[$size] = $remote_media[$size];
+				$this->files_to_sync[$size] = $remote_media[$size];
 			}
 		}
 	}
@@ -450,7 +450,7 @@ class WPSDB_Media_Files extends WPSDB_Addon {
 		if( empty( $attachment['sizes'] ) || apply_filters( 'wpsdb_exclude_resized_media', false ) ) return;
 		foreach( $attachment['sizes'] as $size ) {
 			if( isset( $site_b_media[$size] ) && ! isset( $site_a_media[$size] ) ) {
-				$this->files_to_migrate[$size] = $site_b_media[$size];
+				$this->files_to_sync[$size] = $site_b_media[$size];
 			}
 		}
 	}
@@ -484,8 +484,8 @@ class WPSDB_Media_Files extends WPSDB_Addon {
 		return $result;
 	}
 
-	function migration_form_controls() {
-		$this->template( 'migrate' );
+	function syncing_form_controls() {
+		$this->template( 'sync' );
 	}
 
 	function accepted_profile_fields( $profile_fields ) {
@@ -501,12 +501,12 @@ class WPSDB_Media_Files extends WPSDB_Addon {
 		wp_enqueue_script( 'wp-sync-db-media-files-script', $src, array( 'jquery', 'wp-sync-db-common', 'wp-sync-db-hook', 'wp-sync-db-script' ), $version, true );
 
 		wp_localize_script( 'wp-sync-db-media-files-script', 'wpsdbmf_strings', array(
-			'determining'				=> __( "Determining which media files to migrate, please wait...", 'wp-sync-db-media-files' ),
-			'error_determining'			=> __( "Error while attempting to determine which media files to migrate.", 'wp-sync-db-media-files' ),
-			'migration_failed'			=> __( "Migration failed", 'wp-sync-db-media-files' ),
-			'problem_migrating_media'	=> __( "A problem occurred when migrating the media files.", 'wp-sync-db-media-files' ),
+			'determining'				=> __( "Determining which media files to sync, please wait...", 'wp-sync-db-media-files' ),
+			'error_determining'			=> __( "Error while attempting to determine which media files to sync.", 'wp-sync-db-media-files' ),
+			'syncing_failed'			=> __( "Syncing failed", 'wp-sync-db-media-files' ),
+			'problem_syncing_media'	=> __( "A problem occurred when syncing the media files.", 'wp-sync-db-media-files' ),
 			'media_files'				=> __( "Media Files", 'wp-sync-db-media-files' ),
-			'migrating_media_files'		=> __( "Migrating media files", 'wp-sync-db-media-files' ),
+			'syncing_media_files'		=> __( "Syncing media files", 'wp-sync-db-media-files' ),
 		) );
 
 	}
@@ -608,12 +608,12 @@ class WPSDB_Media_Files extends WPSDB_Addon {
 	}
 
 	function add_nonces( $nonces ) {
-		$nonces['migrate_media'] = wp_create_nonce( 'migrate-media' );
-		$nonces['determine_media_to_migrate'] = wp_create_nonce( 'determine-media-to-migrate' );
+		$nonces['sync_media'] = wp_create_nonce( 'sync-media' );
+		$nonces['determine_media_to_sync'] = wp_create_nonce( 'determine-media-to-sync' );
 		return $nonces;
 	}
 
-	function cli_migration( $outcome, $profile, $verify_connection_response, $initiate_migration_response ) {
+	function cli_syncing( $outcome, $profile, $verify_connection_response, $initiate_syncing_response ) {
 		global $wpsdb, $wpsdb_cli;
 		if ( true !== $outcome ) return $outcome;
 		if ( !isset( $profile['media_files'] ) || '1' !== $profile['media_files'] ) return $outcome;
@@ -623,8 +623,8 @@ class WPSDB_Media_Files extends WPSDB_Addon {
 		}
 
 		$this->set_time_limit();
-		$wpsdb->set_cli_migration();
-		$this->set_cli_migration();
+		$wpsdb->set_cli_syncing();
+		$this->set_cli_syncing();
 
 		$connection_info = explode( "\n", $profile['connection_info'] );
 
@@ -634,42 +634,42 @@ class WPSDB_Media_Files extends WPSDB_Addon {
 		$_POST['remove_local_media'] = ( isset( $profile['remove_local_media'] ) ) ? 1 : 0;
 		$_POST['temp_prefix'] = $verify_connection_response['temp_prefix'];
 
-		do_action( 'wpsdb_cli_before_determine_media_to_migrate', $profile, $verify_connection_response, $initiate_migration_response );
+		do_action( 'wpsdb_cli_before_determine_media_to_sync', $profile, $verify_connection_response, $initiate_syncing_response );
 
-		$response = $this->ajax_determine_media_to_migrate();
-		if( is_wp_error( $determine_media_to_migrate_response = $wpsdb_cli->verify_cli_response( $response, 'ajax_determine_media_to_migrate()' ) ) ) return $determine_media_to_migrate_response;
+		$response = $this->ajax_determine_media_to_sync();
+		if( is_wp_error( $determine_media_to_sync_response = $wpsdb_cli->verify_cli_response( $response, 'ajax_determine_media_to_sync()' ) ) ) return $determine_media_to_sync_response;
 
-		$remote_uploads_url = $determine_media_to_migrate_response['remote_uploads_url'];
-		$files_to_migrate = $determine_media_to_migrate_response['files_to_migrate'];
+		$remote_uploads_url = $determine_media_to_sync_response['remote_uploads_url'];
+		$files_to_sync = $determine_media_to_sync_response['files_to_sync'];
 		// seems like this value needs to be different depending on pull/push?
 		$bottleneck = $wpsdb->get_bottleneck();
 
-		while ( !empty( $files_to_migrate ) ) {
-			$file_chunk_to_migrate = array();
+		while ( !empty( $files_to_sync ) ) {
+			$file_chunk_to_sync = array();
 			$file_chunk_size = 0;
-			$number_of_files_to_migrate = 0;
-			foreach ( $files_to_migrate as $file_to_migrate => $file_size ) {
-				if ( empty( $file_chunk_to_migrate ) ) {
-					$file_chunk_to_migrate[] = $file_to_migrate;
+			$number_of_files_to_sync = 0;
+			foreach ( $files_to_sync as $file_to_sync => $file_size ) {
+				if ( empty( $file_chunk_to_sync ) ) {
+					$file_chunk_to_sync[] = $file_to_sync;
 					$file_chunk_size += $file_size;
-					unset( $files_to_migrate[$file_to_migrate] );
-					++$number_of_files_to_migrate;
+					unset( $files_to_sync[$file_to_sync] );
+					++$number_of_files_to_sync;
 				} else {
-					if ( ( $file_chunk_size + $file_size ) > $bottleneck || $number_of_files_to_migrate >= $verify_connection_response['media_files_max_file_uploads'] ) {
+					if ( ( $file_chunk_size + $file_size ) > $bottleneck || $number_of_files_to_sync >= $verify_connection_response['media_files_max_file_uploads'] ) {
 						break;
 					} else {
-						$file_chunk_to_migrate[] = $file_to_migrate;
+						$file_chunk_to_sync[] = $file_to_sync;
 						$file_chunk_size += $file_size;
-						unset( $files_to_migrate[$file_to_migrate] );
-						++$number_of_files_to_migrate;
+						unset( $files_to_sync[$file_to_sync] );
+						++$number_of_files_to_sync;
 					}
 				}
 
-				$_POST['file_chunk'] = $file_chunk_to_migrate;
+				$_POST['file_chunk'] = $file_chunk_to_sync;
 				$_POST['remote_uploads_url'] = $remote_uploads_url;
 
-				$response = $this->ajax_migrate_media();
-				if( is_wp_error( $migrate_media_response = $wpsdb_cli->verify_cli_response( $response, 'ajax_migrate_media()' ) ) ) return $migrate_media_response;
+				$response = $this->ajax_sync_media();
+				if( is_wp_error( $sync_media_response = $wpsdb_cli->verify_cli_response( $response, 'ajax_sync_media()' ) ) ) return $sync_media_response;
 			}
 		}
 		return true;
