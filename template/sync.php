@@ -14,8 +14,8 @@
 			</li>
 		</ul>
 	</div>
-	<p class="media-migration-unavailable inline-message warning" style="display: none; margin: 10px 0 0 0;">
-		<strong><?php _e( 'Addon Missing', 'wp-sync-db-media-files' ); ?></strong> &mdash; <?php _e( 'The Media Files addon is inactive on the <strong>remote site</strong>. Please install and activate it to enable media file migration.', 'wp-sync-db-media-files' ); ?>
+	<p class="media-syncing-unavailable inline-message warning" style="display: none; margin: 10px 0 0 0;">
+		<strong><?php _e( 'Addon Missing', 'wp-sync-db-media-files' ); ?></strong> &mdash; <?php _e( 'The Media Files addon is inactive on the <strong>remote site</strong>. Please install and activate it to enable media file syncing.', 'wp-sync-db-media-files' ); ?>
 	</p>
 	<p class="media-files-different-plugin-version-notice inline-message warning" style="display: none; margin: 10px 0 0 0;">
 		<strong><?php _e( 'Version Mismatch', 'wp-sync-db-media-files' ); ?></strong> &mdash; <?php _e( sprintf( 'We have detected you have version <span class="media-file-remote-version"></span> of WP Sync DB Media Files at <span class="media-files-remote-location"></span> but are using %1$s here. Please go to the <a href="%2$s">Plugins page</a> on both installs and check for updates.', $GLOBALS['wpsdb_meta'][$this->plugin_slug]['version'], network_admin_url( 'plugins.php' ) ), 'wp-sync-db-media-files' ); ?>

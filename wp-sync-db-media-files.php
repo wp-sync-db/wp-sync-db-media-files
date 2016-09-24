@@ -1,7 +1,7 @@
 <?php
 /*
 Plugin Name: WP Sync DB Media Files
-Description: An extension of WP Sync DB that allows the migration of media files.
+Description: An extension of WP Sync DB that allows the syncing of media files.
 Author: Sean Lang
 Version: 1.1.4b1
 Author URI: http://slang.cx
