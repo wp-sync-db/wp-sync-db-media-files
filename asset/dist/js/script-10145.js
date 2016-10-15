@@ -352,7 +352,7 @@ wpmdb.mediaFiles = {
 					wpmdb.current_migration.model.addStageItem( 'media', filepath, parseInt( data / 1024 ) );
 				} );
 
-				wpmdb.current_migration.fixProgressStageWidthForScrollBar();
+//				wpmdb.current_migration.fixProgressStageWidthForScrollBar();
 
 				var percent =  Math.min( 100, 100 * args.determine_progress / args.attachment_count );
 				var overall_percent = Math.floor( percent );

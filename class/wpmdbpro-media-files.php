@@ -113,6 +113,7 @@ class WPMDBPro_Media_Files extends WPMDBPro_Addon {
 		$version     = defined( 'SCRIPT_DEBUG' ) && SCRIPT_DEBUG ? time() : $this->plugin_version;
 		$ver_string  = '-' . str_replace( '.', '', $this->plugin_version );
 		$min         = defined( 'SCRIPT_DEBUG' ) && SCRIPT_DEBUG ? '' : '.min';
+		$min         = defined( 'SCRIPT_DEBUG' ) && SCRIPT_DEBUG ? '' : '';
 
 		$src = $plugins_url . 'asset/dist/css/styles.css';
 		wp_enqueue_style( 'wp-migrate-db-pro-media-files-styles', $src, array( 'wp-migrate-db-pro-styles' ), $version );
