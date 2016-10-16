@@ -1,11 +1,11 @@
 <?php
 /*
 Plugin Name: WP Migrate DB Pro Media Files
-Plugin URI: http://deliciousbrains.com/wp-migrate-db-pro/
+Plugin URI:
 Description: An extension to WP Migrate DB Pro, allows the migration of media files.
 Author: Delicious Brains
-Version: 1.4.5
-Author URI: http://deliciousbrains.com
+Version: 10.1.4.5
+Author URI:
 Network: True
 */
 
