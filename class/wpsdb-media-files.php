@@ -170,7 +170,13 @@ class WPSDB_Media_Files extends WPSDB_Addon {
 	function process_pull_request() {
 		$files_to_download = $_POST['file_chunk'];
 		$remote_uploads_url = trailingslashit( $_POST['remote_uploads_url'] );
-		$parsed = parse_url( $_POST['url'] );
+        $parsed = parse_url( $_POST['url'] );
+
+        $relative_path_check = '/wp-content/';
+        if ( substr($remote_uploads_url, 0, strlen($relative_path_check)) === $relative_path_check ){
+            $remote_uploads_url = $parsed['scheme'] . '://' . $parsed['host'] . $remote_uploads_url;
+        }
+
 		if( ! empty( $parsed['user'] ) ) {
 			$credentials = sprintf( '%s:%s@', $parsed['user'], $parsed['pass'] );
 			$remote_uploads_url = str_replace( '://', '://' . $credentials, $remote_uploads_url );
